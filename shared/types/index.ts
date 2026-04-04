@@ -11,6 +11,17 @@ export interface Session {
   lastUsedAt: string
 }
 
+export interface ProjectSummary {
+  projectName: string
+  sessionCount: number
+  requestTokensTotal: number
+  responseTokensTotal: number
+  cacheReadTokensTotal: number
+  cacheCreationTokensTotal: number
+  createdAt: string
+  lastUsedAt: string
+}
+
 export interface Prompt {
   id: string
   sessionId: string
