@@ -35,6 +35,7 @@ export interface AggregatedPrompt {
 
 export type UsageChartPage = 'main' | 'session' | 'prompt'
 export type UsageChartKind = 'stacked' | 'breakdown'
+export type UsageChartDimension = 'session' | 'project'
 
 export interface UsageChartWeights {
   prompt: number

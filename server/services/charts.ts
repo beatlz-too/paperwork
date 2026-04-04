@@ -4,6 +4,7 @@ import { useDb } from '#server/db/client'
 import type {
   BreakdownChartResponse,
   UsageChartDataset,
+  UsageChartDimension,
   UsageChartPage,
   UsageChartResponse,
   UsageChartWeights
@@ -102,6 +103,37 @@ async function loadMainRows(): Promise<ChartRow[]> {
       cacheRead: row.cacheReadTokensTotal,
       cacheCreation: row.cacheCreationTokensTotal
     })
+  }))
+}
+
+async function loadMainProjectRows(): Promise<ChartRow[]> {
+  const db = useDb()
+  const rows = await db.select().from(sessions).orderBy(asc(sessions.createdAt))
+
+  const grouped = new Map<string, { weightedTokens: number, at: Date }>()
+
+  for (const row of rows) {
+    const key = row.projectName?.trim() || 'other'
+    const wt = weightTokens({
+      prompt: row.requestTokensTotal,
+      response: row.responseTokensTotal,
+      cacheRead: row.cacheReadTokensTotal,
+      cacheCreation: row.cacheCreationTokensTotal
+    })
+    const existing = grouped.get(key)
+    if (existing) {
+      existing.weightedTokens += wt
+      if (row.lastUsedAt > existing.at) existing.at = row.lastUsedAt
+    }
+    else {
+      grouped.set(key, { weightedTokens: wt, at: row.lastUsedAt })
+    }
+  }
+
+  return [...grouped.entries()].map(([label, { weightedTokens, at }]) => ({
+    label,
+    at,
+    weightedTokens
   }))
 }
 
@@ -241,9 +273,13 @@ export async function getUsageChartData(params: {
   page: UsageChartPage
   sessionId?: string
   promptId?: string
+  dimension?: UsageChartDimension
 }): Promise<UsageChartResponse> {
   if (params.page === 'main') {
-    return buildChart(await loadMainRows(), 'main')
+    const rows = params.dimension === 'project'
+      ? await loadMainProjectRows()
+      : await loadMainRows()
+    return buildChart(rows, 'main')
   }
 
   if (params.page === 'session') {

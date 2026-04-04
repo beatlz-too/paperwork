@@ -1,12 +1,14 @@
 <script lang="ts" setup>
 import type { TableColumn, TableRow } from '@nuxt/ui'
-import type { BreakdownChartResponse, Session, UsageChartResponse } from '#shared/types'
+import type { BreakdownChartResponse, Session, UsageChartDimension, UsageChartResponse } from '#shared/types'
 
 useSeoMeta({ title: 'Sessions – Paperwork' })
 
+const dimension = ref<UsageChartDimension>('session')
+
 const { data: sessions, status } = await useFetch<Session[]>('/api/sessions')
 const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
-  query: { page: 'main' }
+  query: computed(() => ({ page: 'main', dimension: dimension.value }))
 })
 const { data: breakdownData, status: breakdownStatus } = await useFetch<BreakdownChartResponse>('/api/charts', {
   query: { page: 'main', kind: 'breakdown' }
@@ -50,6 +52,24 @@ function onSelect(_e: Event, row: TableRow<Session>) {
       <p class="text-muted mt-1">
         Token usage breakdown per session
       </p>
+    </div>
+
+    <div class="mb-4 flex items-center gap-2">
+      <span class="text-sm text-muted">View by</span>
+      <UButtonGroup size="sm">
+        <UButton
+          :variant="dimension === 'session' ? 'solid' : 'outline'"
+          @click="dimension = 'session'"
+        >
+          Sessions
+        </UButton>
+        <UButton
+          :variant="dimension === 'project' ? 'solid' : 'outline'"
+          @click="dimension = 'project'"
+        >
+          Projects
+        </UButton>
+      </UButtonGroup>
     </div>
 
     <div class="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
