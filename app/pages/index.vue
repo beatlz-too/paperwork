@@ -95,6 +95,10 @@ const router = useRouter()
 function onSelect(_e: Event, row: TableRow<Session>) {
   router.push(`/sessions/${row.original.sessionId}`)
 }
+
+function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
+  router.push(`/projects/${encodeURIComponent((row.original as ProjectSummary).projectName)}`)
+}
 </script>
 
 <template>
@@ -176,8 +180,8 @@ function onSelect(_e: Event, row: TableRow<Session>) {
       :data="tableData"
       :columns="columns"
       :loading="status === 'pending'"
-      :class="dimension === 'session' ? 'cursor-pointer' : ''"
-      :on-select="dimension === 'session' ? onSelect : undefined"
+      class="cursor-pointer"
+      :on-select="dimension === 'session' ? onSelect : onProjectSelect"
     >
       <template #projectName-cell="{ row }">
         <span class="text-sm">{{ row.original.projectName || '—' }}</span>

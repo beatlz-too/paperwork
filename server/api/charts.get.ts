@@ -24,12 +24,14 @@ export default defineEventHandler(async (event) => {
   }
 
   const sessionId = query.sessionId ? String(query.sessionId) : undefined
+  const projectName = query.projectName ? decodeURIComponent(String(query.projectName)) : undefined
 
   if (kind === 'breakdown') {
     return getBreakdownChartData({
       page,
       sessionId,
-      promptId: query.promptId ? String(query.promptId) : undefined
+      promptId: query.promptId ? String(query.promptId) : undefined,
+      projectName
     })
   }
 
@@ -37,6 +39,7 @@ export default defineEventHandler(async (event) => {
     page,
     sessionId,
     promptId: query.promptId ? String(query.promptId) : undefined,
-    dimension
+    dimension,
+    projectName
   })
 })
