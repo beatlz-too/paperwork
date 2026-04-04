@@ -34,11 +34,7 @@ const options = computed<ChartOptions<'bar'>>(() => ({
   },
   plugins: {
     legend: {
-      position: 'top',
-      labels: {
-        usePointStyle: true,
-        boxWidth: 10
-      }
+      display: false
     },
     tooltip: {
       callbacks: {

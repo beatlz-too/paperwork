@@ -33,6 +33,7 @@ export interface AggregatedPrompt {
 }
 
 export type UsageChartPage = 'main' | 'session' | 'prompt'
+export type UsageChartKind = 'stacked' | 'breakdown'
 
 export interface UsageChartWeights {
   prompt: number
@@ -56,5 +57,22 @@ export interface UsageChartResponse {
   page: UsageChartPage
   labels: string[]
   datasets: UsageChartDataset[]
+  weights: UsageChartWeights
+}
+
+export interface BreakdownChartDataset {
+  label: string
+  data: number[]
+  borderColor: string[]
+  backgroundColor: string[]
+  borderWidth: number
+  borderRadius: number
+  borderSkipped: false
+}
+
+export interface BreakdownChartResponse {
+  page: Exclude<UsageChartPage, 'prompt'>
+  labels: string[]
+  datasets: BreakdownChartDataset[]
   weights: UsageChartWeights
 }

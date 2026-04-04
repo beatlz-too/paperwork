@@ -1,7 +1,8 @@
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, sum } from 'drizzle-orm'
 import { prompts, sessions } from '#server/db/schema'
 import { useDb } from '#server/db/client'
 import type {
+  BreakdownChartResponse,
   UsageChartDataset,
   UsageChartPage,
   UsageChartResponse,
@@ -170,6 +171,65 @@ async function loadPromptRows(sessionId: string, promptId: string): Promise<Char
       cacheCreation: row.cacheCreationTokens
     })
   }))
+}
+
+const BREAKDOWN_LABELS = ['Input', 'Output', 'Cache Read', 'Cache Write']
+const BREAKDOWN_COLORS = ['#2563eb', '#0f766e', '#16a34a', '#ca8a04']
+
+async function loadBreakdownTotals(page: Exclude<UsageChartPage, 'prompt'>, sessionId?: string): Promise<number[]> {
+  const db = useDb()
+
+  if (page === 'main') {
+    const [row] = await db.select({
+      promptTotal: sum(sessions.requestTokensTotal),
+      responseTotal: sum(sessions.responseTokensTotal),
+      cacheReadTotal: sum(sessions.cacheReadTokensTotal),
+      cacheCreationTotal: sum(sessions.cacheCreationTokensTotal)
+    }).from(sessions)
+
+    return [
+      (Number(row?.promptTotal ?? 0)) * TOKEN_WEIGHTS.prompt,
+      (Number(row?.responseTotal ?? 0)) * TOKEN_WEIGHTS.response,
+      (Number(row?.cacheReadTotal ?? 0)) * TOKEN_WEIGHTS.cacheRead,
+      (Number(row?.cacheCreationTotal ?? 0)) * TOKEN_WEIGHTS.cacheCreation
+    ]
+  }
+
+  const [row] = await db.select({
+    promptTotal: sum(prompts.promptTokens),
+    responseTotal: sum(prompts.responseTokens),
+    cacheReadTotal: sum(prompts.cacheReadTokens),
+    cacheCreationTotal: sum(prompts.cacheCreationTokens)
+  }).from(prompts).where(eq(prompts.sessionId, sessionId!))
+
+  return [
+    (Number(row?.promptTotal ?? 0)) * TOKEN_WEIGHTS.prompt,
+    (Number(row?.responseTotal ?? 0)) * TOKEN_WEIGHTS.response,
+    (Number(row?.cacheReadTotal ?? 0)) * TOKEN_WEIGHTS.cacheRead,
+    (Number(row?.cacheCreationTotal ?? 0)) * TOKEN_WEIGHTS.cacheCreation
+  ]
+}
+
+export async function getBreakdownChartData(params: {
+  page: Exclude<UsageChartPage, 'prompt'>
+  sessionId?: string
+}): Promise<BreakdownChartResponse> {
+  const data = await loadBreakdownTotals(params.page, params.sessionId)
+
+  return {
+    page: params.page,
+    labels: BREAKDOWN_LABELS,
+    datasets: [{
+      label: 'Weighted Tokens',
+      data,
+      borderColor: BREAKDOWN_COLORS,
+      backgroundColor: BREAKDOWN_COLORS.map(c => rgba(c, 0.18)),
+      borderWidth: 1,
+      borderRadius: 4,
+      borderSkipped: false
+    }],
+    weights: TOKEN_WEIGHTS
+  }
 }
 
 export async function getUsageChartData(params: {
