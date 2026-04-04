@@ -1,14 +1,7 @@
-export interface Project {
-  id: string
-  name: string
-  createdAt: string
-}
-
 export interface Session {
   id: string
   sessionId: string
   name: string
-  projectId: string | null
   projectName: string | null
   requestTokensTotal: number
   responseTokensTotal: number

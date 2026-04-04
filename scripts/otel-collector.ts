@@ -17,8 +17,11 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import { eq, sql } from 'drizzle-orm'
+import path from 'path'
 import { sessions, prompts } from '../server/db/schema'
 import { getExportRequestProto, ServiceClientType } from '@opentelemetry/otlp-proto-exporter-base'
+
+const PROJECT_NAME: string = process.argv[2] ?? path.basename(path.dirname(import.meta.dir))
 
 // ---------------------------------------------------------------------------
 // DB setup
@@ -174,7 +177,7 @@ async function processLogRecord(record: LogRecord, resourceAttrs?: KeyValue[]): 
 
   await db
     .insert(sessions)
-    .values({ sessionId, name: '', createdAt, lastUsedAt: createdAt })
+    .values({ sessionId, name: '', projectName: PROJECT_NAME, createdAt, lastUsedAt: createdAt })
     .onConflictDoUpdate({
       target: sessions.sessionId,
       set: { lastUsedAt: sql`GREATEST(sessions.last_used_at, EXCLUDED.last_used_at)` }
@@ -258,7 +261,7 @@ async function processSpan(span: Span, resourceAttrs?: KeyValue[]): Promise<void
 
     await db
       .insert(sessions)
-      .values({ sessionId, name, createdAt: startedAt, lastUsedAt: startedAt })
+      .values({ sessionId, name, projectName: PROJECT_NAME, createdAt: startedAt, lastUsedAt: startedAt })
       .onConflictDoUpdate({
         target: sessions.sessionId,
         set: {
@@ -300,7 +303,7 @@ async function processSpan(span: Span, resourceAttrs?: KeyValue[]): Promise<void
 
   await db
     .insert(sessions)
-    .values({ sessionId, name: '', createdAt, lastUsedAt: createdAt })
+    .values({ sessionId, name: '', projectName: PROJECT_NAME, createdAt, lastUsedAt: createdAt })
     .onConflictDoUpdate({
       target: sessions.sessionId,
       set: {
@@ -478,6 +481,7 @@ const server = Bun.serve({
 })
 
 console.log(`OTel collector listening on http://localhost:${PORT}`)
+console.log(`Project: ${PROJECT_NAME}${process.argv[2] ? '' : ' (default — pass a name as argument to override)'}`)
 console.log('Waiting for Claude Code telemetry spans...')
 
 process.on('SIGINT', async () => {
