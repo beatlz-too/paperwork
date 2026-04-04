@@ -156,8 +156,10 @@ bun run db:migrate    # re-run the migration script (update it to include the ne
 
 The collector must be running **before** you start Claude Code so that spans are captured.
 
+_Project Name_ - This is an optional field that you can use to group your sessions. For example, if you are working on multiple projects, you can use this field to group your sessions by project. If you don't assign a project name, it's going to default to your source folder's name.
+
 ```bash
-bun run telemetry <project-name> // If you don't assign a project name, it's going to default to your source folder's name
+bun run telemetry <project-name>
 ```
 
 It listens on `http://localhost:4318` (OTLP/HTTP JSON) and writes to the database in real time.
