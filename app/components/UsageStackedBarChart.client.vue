@@ -19,32 +19,23 @@ function formatAxisLabel(value: string): string {
   }).format(date)
 }
 
-function formatTooltipLabel(value: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toUTCString().replace(' GMT', ' UTC')
-}
-
 const options = computed<ChartOptions<'bar'>>(() => ({
   responsive: true,
   maintainAspectRatio: false,
   interaction: {
-    mode: 'index',
-    intersect: false
+    mode: 'nearest',
+    intersect: true
   },
   plugins: {
     legend: {
       display: false
     },
     tooltip: {
+      mode: 'nearest',
+      intersect: true,
       callbacks: {
-        title(items) {
-          const label = items[0]?.label
-          return typeof label === 'string' ? formatTooltipLabel(label) : ''
-        },
         label(context) {
-          const value = Number(context.parsed.y ?? 0)
-          return `${context.dataset.label}: ${value.toLocaleString()}`
+          return context.dataset.label
         }
       }
     }
