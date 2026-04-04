@@ -1,11 +1,16 @@
 <script lang="ts" setup>
-import type { TableColumn } from '@nuxt/ui'
-import type { TableRow } from '@nuxt/ui'
-import type { Session } from '#shared/types'
+import type { TableColumn, TableRow } from '@nuxt/ui'
+import type { BreakdownChartResponse, Session, UsageChartResponse } from '#shared/types'
 
 useSeoMeta({ title: 'Sessions – Paperwork' })
 
 const { data: sessions, status } = await useFetch<Session[]>('/api/sessions')
+const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
+  query: { page: 'main' }
+})
+const { data: breakdownData, status: breakdownStatus } = await useFetch<BreakdownChartResponse>('/api/charts', {
+  query: { page: 'main', kind: 'breakdown' }
+})
 
 const columns: TableColumn<Session>[] = [
   { accessorKey: 'name', header: 'Session Name' },
@@ -44,6 +49,52 @@ function onSelect(_e: Event, row: TableRow<Session>) {
       <p class="text-muted mt-1">
         Token usage breakdown per session
       </p>
+    </div>
+
+    <div class="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <UCard>
+        <template #header>
+          <div>
+            <h2 class="text-base font-semibold">
+              Usage Over Time
+            </h2>
+            <p class="text-sm text-muted">
+              Stacked bars by session with weighted token totals.
+            </p>
+          </div>
+        </template>
+
+        <USkeleton
+          v-if="chartStatus === 'pending'"
+          class="h-[320px] w-full"
+        />
+        <UsageStackedBarChart
+          v-else-if="chartData"
+          :chart-data="chartData"
+        />
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <div>
+            <h2 class="text-base font-semibold">
+              Token Type Breakdown
+            </h2>
+            <p class="text-sm text-muted">
+              Total weighted expenditure per token type across all sessions.
+            </p>
+          </div>
+        </template>
+
+        <USkeleton
+          v-if="breakdownStatus === 'pending'"
+          class="h-[320px] w-full"
+        />
+        <UsageBreakdownBarChart
+          v-else-if="breakdownData"
+          :chart-data="breakdownData"
+        />
+      </UCard>
     </div>
 
     <UTable
@@ -87,7 +138,10 @@ function onSelect(_e: Event, row: TableRow<Session>) {
 
       <template #empty>
         <div class="flex flex-col items-center gap-2 py-12 text-muted">
-          <UIcon name="i-lucide-inbox" class="text-4xl" />
+          <UIcon
+            name="i-lucide-inbox"
+            class="text-4xl"
+          />
           <p>No sessions yet. Start Claude Code with OTel enabled.</p>
         </div>
       </template>

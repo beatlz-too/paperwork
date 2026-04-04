@@ -21,10 +21,12 @@
     "@nuxt/ui": "^4.6.0",
     "@opentelemetry/otlp-proto-exporter-base": "^0.51.1",
     "@opentelemetry/otlp-transformer": "^0.214.0",
+    "chart.js": "^4.5.1",
     "drizzle-orm": "^0.42.0",
     "nuxt": "^4.4.2",
     "postgres": "^3.4.5",
-    "tailwindcss": "^4.2.2"
+    "tailwindcss": "^4.2.2",
+    "vue-chartjs": "^5.3.3"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.15.2",
