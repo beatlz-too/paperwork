@@ -16,9 +16,9 @@ type ChartRow = {
 
 const TOKEN_WEIGHTS: UsageChartWeights = {
   prompt: 1,
-  response: 1.25,
-  cacheRead: 0.35,
-  cacheCreation: 0.75
+  response: 5,
+  cacheRead: 0.1,
+  cacheCreation: 0.5
 }
 
 const PALETTE = [
