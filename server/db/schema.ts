@@ -1,5 +1,11 @@
 import { pgTable, text, integer, timestamp, uuid } from 'drizzle-orm/pg-core'
 
+export const projects = pgTable('projects', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+})
+
 export const sessions = pgTable('sessions', {
   id: uuid('id').primaryKey().defaultRandom(),
   sessionId: text('session_id').notNull().unique(),
@@ -9,7 +15,8 @@ export const sessions = pgTable('sessions', {
   cacheReadTokensTotal: integer('cache_read_tokens_total').notNull().default(0),
   cacheCreationTokensTotal: integer('cache_creation_tokens_total').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow()
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow(),
+  projectId: uuid('project_id').references(() => projects.id)
 })
 
 export const prompts = pgTable('prompts', {
@@ -24,5 +31,6 @@ export const prompts = pgTable('prompts', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 })
 
+export type Project = typeof projects.$inferSelect
 export type Session = typeof sessions.$inferSelect
 export type Prompt = typeof prompts.$inferSelect
