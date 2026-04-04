@@ -11,7 +11,9 @@ const copied = ref(false)
 async function copy() {
   await navigator.clipboard.writeText(props.uuid)
   copied.value = true
-  setTimeout(() => { copied.value = false }, 1500)
+  setTimeout(() => {
+    copied.value = false
+  }, 1500)
 }
 </script>
 

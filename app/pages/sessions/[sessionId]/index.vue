@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { TableColumn } from '@nuxt/ui'
-import type { Session, AggregatedPrompt } from '#shared/types'
+import type { Session, AggregatedPrompt, UsageChartResponse } from '#shared/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,6 +16,12 @@ useSeoMeta({
 const { data: prompts, status } = await useFetch<AggregatedPrompt[]>(
   `/api/sessions/${sessionId}/prompts`
 )
+const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
+  query: {
+    page: 'session',
+    sessionId
+  }
+})
 
 const columns: TableColumn<AggregatedPrompt>[] = [
   { accessorKey: 'promptId', header: 'Prompt ID' },
@@ -80,7 +86,7 @@ function onNameKeydown(e: KeyboardEvent) {
           class="text-2xl font-bold bg-transparent border-b border-current outline-none w-full"
           @blur="saveName"
           @keydown="onNameKeydown"
-        />
+        >
         <h1
           v-else
           class="text-2xl font-bold cursor-pointer hover:opacity-70 transition-opacity"
@@ -95,34 +101,81 @@ function onNameKeydown(e: KeyboardEvent) {
       </div>
     </div>
 
-    <div v-if="session" class="mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div
+      v-if="session"
+      class="mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4"
+    >
       <UCard>
-        <div class="text-xs text-muted uppercase tracking-wide mb-1">Input Tokens</div>
-        <div class="text-2xl font-semibold">{{ formatTokens(session.requestTokensTotal) }}</div>
+        <div class="text-xs text-muted uppercase tracking-wide mb-1">
+          Input Tokens
+        </div>
+        <div class="text-2xl font-semibold">
+          {{ formatTokens(session.requestTokensTotal) }}
+        </div>
       </UCard>
       <UCard>
-        <div class="text-xs text-muted uppercase tracking-wide mb-1">Output Tokens</div>
-        <div class="text-2xl font-semibold">{{ formatTokens(session.responseTokensTotal) }}</div>
+        <div class="text-xs text-muted uppercase tracking-wide mb-1">
+          Output Tokens
+        </div>
+        <div class="text-2xl font-semibold">
+          {{ formatTokens(session.responseTokensTotal) }}
+        </div>
       </UCard>
       <UCard>
-        <div class="text-xs text-muted uppercase tracking-wide mb-1">Cache Read</div>
-        <div class="text-2xl font-semibold">{{ formatTokens(session.cacheReadTokensTotal) }}</div>
+        <div class="text-xs text-muted uppercase tracking-wide mb-1">
+          Cache Read
+        </div>
+        <div class="text-2xl font-semibold">
+          {{ formatTokens(session.cacheReadTokensTotal) }}
+        </div>
       </UCard>
       <UCard>
-        <div class="text-xs text-muted uppercase tracking-wide mb-1">Cache Write</div>
-        <div class="text-2xl font-semibold">{{ formatTokens(session.cacheCreationTokensTotal) }}</div>
+        <div class="text-xs text-muted uppercase tracking-wide mb-1">
+          Cache Write
+        </div>
+        <div class="text-2xl font-semibold">
+          {{ formatTokens(session.cacheCreationTokensTotal) }}
+        </div>
       </UCard>
       <UCard>
-        <div class="text-xs text-muted uppercase tracking-wide mb-1">Prompts</div>
-        <div class="text-2xl font-semibold">{{ prompts?.length ?? '—' }}</div>
+        <div class="text-xs text-muted uppercase tracking-wide mb-1">
+          Prompts
+        </div>
+        <div class="text-2xl font-semibold">
+          {{ prompts?.length ?? '—' }}
+        </div>
       </UCard>
       <UCard>
-        <div class="text-xs text-muted uppercase tracking-wide mb-1">Last Used</div>
+        <div class="text-xs text-muted uppercase tracking-wide mb-1">
+          Last Used
+        </div>
         <div class="text-sm font-medium">
           {{ session.lastUsedAt ? new Date(session.lastUsedAt).toUTCString().replace(' GMT', ' UTC') : '—' }}
         </div>
       </UCard>
     </div>
+
+    <UCard class="mb-6">
+      <template #header>
+        <div>
+          <h2 class="text-base font-semibold">
+            Prompt Usage Over Time
+          </h2>
+          <p class="text-sm text-muted">
+            Stacked bars by prompt with weighted token totals computed in the backend.
+          </p>
+        </div>
+      </template>
+
+      <USkeleton
+        v-if="chartStatus === 'pending'"
+        class="h-[320px] w-full"
+      />
+      <UsageStackedBarChart
+        v-else-if="chartData"
+        :chart-data="chartData"
+      />
+    </UCard>
 
     <UTable
       :data="prompts ?? []"
@@ -135,14 +188,25 @@ function onNameKeydown(e: KeyboardEvent) {
         <UuidDisplay :uuid="row.original.promptId" />
       </template>
 
-      <template #promptTokens-cell="{ row }">{{ formatTokens(row.original.promptTokens) }}</template>
-      <template #responseTokens-cell="{ row }">{{ formatTokens(row.original.responseTokens) }}</template>
-      <template #cacheReadTokens-cell="{ row }">{{ formatTokens(row.original.cacheReadTokens) }}</template>
-      <template #cacheCreationTokens-cell="{ row }">{{ formatTokens(row.original.cacheCreationTokens) }}</template>
+      <template #promptTokens-cell="{ row }">
+        {{ formatTokens(row.original.promptTokens) }}
+      </template>
+      <template #responseTokens-cell="{ row }">
+        {{ formatTokens(row.original.responseTokens) }}
+      </template>
+      <template #cacheReadTokens-cell="{ row }">
+        {{ formatTokens(row.original.cacheReadTokens) }}
+      </template>
+      <template #cacheCreationTokens-cell="{ row }">
+        {{ formatTokens(row.original.cacheCreationTokens) }}
+      </template>
 
       <template #empty>
         <div class="flex flex-col items-center gap-2 py-12 text-muted">
-          <UIcon name="i-lucide-message-square" class="text-4xl" />
+          <UIcon
+            name="i-lucide-message-square"
+            class="text-4xl"
+          />
           <p>No prompts recorded for this session.</p>
         </div>
       </template>

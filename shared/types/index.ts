@@ -31,3 +31,30 @@ export interface AggregatedPrompt {
   cacheCreationTokens: number
   createdAt: string
 }
+
+export type UsageChartPage = 'main' | 'session' | 'prompt'
+
+export interface UsageChartWeights {
+  prompt: number
+  response: number
+  cacheRead: number
+  cacheCreation: number
+}
+
+export interface UsageChartDataset {
+  label: string
+  data: number[]
+  borderColor: string
+  backgroundColor: string
+  stack: string
+  borderWidth: number
+  borderRadius: number
+  borderSkipped: false
+}
+
+export interface UsageChartResponse {
+  page: UsageChartPage
+  labels: string[]
+  datasets: UsageChartDataset[]
+  weights: UsageChartWeights
+}

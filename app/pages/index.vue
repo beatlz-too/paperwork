@@ -1,11 +1,15 @@
 <script lang="ts" setup>
-import type { TableColumn } from '@nuxt/ui'
-import type { TableRow } from '@nuxt/ui'
-import type { Session } from '#shared/types'
+import type { TableColumn, TableRow } from '@nuxt/ui'
+import type { Session, UsageChartResponse } from '#shared/types'
 
 useSeoMeta({ title: 'Sessions – Paperwork' })
 
 const { data: sessions, status } = await useFetch<Session[]>('/api/sessions')
+const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
+  query: {
+    page: 'main'
+  }
+})
 
 const columns: TableColumn<Session>[] = [
   { accessorKey: 'name', header: 'Session Name' },
@@ -45,6 +49,28 @@ function onSelect(_e: Event, row: TableRow<Session>) {
         Token usage breakdown per session
       </p>
     </div>
+
+    <UCard class="mb-6">
+      <template #header>
+        <div>
+          <h2 class="text-base font-semibold">
+            Usage Over Time
+          </h2>
+          <p class="text-sm text-muted">
+            Stacked bars by session with weighted token totals computed on the server.
+          </p>
+        </div>
+      </template>
+
+      <USkeleton
+        v-if="chartStatus === 'pending'"
+        class="h-[320px] w-full"
+      />
+      <UsageStackedBarChart
+        v-else-if="chartData"
+        :chart-data="chartData"
+      />
+    </UCard>
 
     <UTable
       :data="sessions ?? []"
@@ -87,7 +113,10 @@ function onSelect(_e: Event, row: TableRow<Session>) {
 
       <template #empty>
         <div class="flex flex-col items-center gap-2 py-12 text-muted">
-          <UIcon name="i-lucide-inbox" class="text-4xl" />
+          <UIcon
+            name="i-lucide-inbox"
+            class="text-4xl"
+          />
           <p>No sessions yet. Start Claude Code with OTel enabled.</p>
         </div>
       </template>

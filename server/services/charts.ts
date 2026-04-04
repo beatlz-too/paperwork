@@ -1,0 +1,194 @@
+import { and, asc, eq } from 'drizzle-orm'
+import { prompts, sessions } from '#server/db/schema'
+import { useDb } from '#server/db/client'
+import type {
+  UsageChartDataset,
+  UsageChartPage,
+  UsageChartResponse,
+  UsageChartWeights
+} from '#shared/types'
+
+type ChartRow = {
+  label: string
+  at: Date
+  weightedTokens: number
+}
+
+const TOKEN_WEIGHTS: UsageChartWeights = {
+  prompt: 1,
+  response: 1.25,
+  cacheRead: 0.35,
+  cacheCreation: 0.75
+}
+
+const PALETTE = [
+  '#0f766e',
+  '#2563eb',
+  '#7c3aed',
+  '#db2777',
+  '#ea580c',
+  '#16a34a',
+  '#ca8a04',
+  '#475569'
+]
+
+function rgba(hex: string, alpha: number): string {
+  const normalized = hex.replace('#', '')
+  const value = normalized.length === 3
+    ? normalized.split('').map(ch => ch + ch).join('')
+    : normalized
+
+  const r = Number.parseInt(value.slice(0, 2), 16)
+  const g = Number.parseInt(value.slice(2, 4), 16)
+  const b = Number.parseInt(value.slice(4, 6), 16)
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+function formatLabel(date: Date): string {
+  return date.toISOString().replace('T', ' ').replace('.000Z', ' UTC')
+}
+
+function weightTokens(values: {
+  prompt?: number
+  response?: number
+  cacheRead?: number
+  cacheCreation?: number
+}): number {
+  return (values.prompt ?? 0) * TOKEN_WEIGHTS.prompt
+    + (values.response ?? 0) * TOKEN_WEIGHTS.response
+    + (values.cacheRead ?? 0) * TOKEN_WEIGHTS.cacheRead
+    + (values.cacheCreation ?? 0) * TOKEN_WEIGHTS.cacheCreation
+}
+
+function buildChart(rows: ChartRow[], page: UsageChartPage): UsageChartResponse {
+  const sortedRows = [...rows].sort((a, b) => a.at.getTime() - b.at.getTime())
+  const labels = sortedRows.map(row => formatLabel(row.at))
+
+  const datasets: UsageChartDataset[] = sortedRows.map((row, index) => {
+    const color = PALETTE[index % PALETTE.length]!
+
+    return {
+      label: row.label,
+      data: labels.map((_, labelIndex) => labelIndex >= index ? row.weightedTokens : 0),
+      borderColor: color,
+      backgroundColor: rgba(color, 0.18),
+      stack: 'usage',
+      borderWidth: 1,
+      borderRadius: 4,
+      borderSkipped: false
+    }
+  })
+
+  return {
+    page,
+    labels,
+    datasets,
+    weights: TOKEN_WEIGHTS
+  }
+}
+
+async function loadMainRows(): Promise<ChartRow[]> {
+  const db = useDb()
+  const rows = await db.select().from(sessions).orderBy(asc(sessions.createdAt))
+
+  return rows.map(row => ({
+    label: row.name || row.sessionId.slice(0, 8),
+    at: row.lastUsedAt,
+    weightedTokens: weightTokens({
+      prompt: row.requestTokensTotal,
+      response: row.responseTokensTotal,
+      cacheRead: row.cacheReadTokensTotal,
+      cacheCreation: row.cacheCreationTokensTotal
+    })
+  }))
+}
+
+async function loadSessionRows(sessionId: string): Promise<ChartRow[]> {
+  const db = useDb()
+  const rows = await db
+    .select()
+    .from(prompts)
+    .where(eq(prompts.sessionId, sessionId))
+    .orderBy(asc(prompts.createdAt))
+
+  const aggregated = new Map<string, {
+    createdAt: Date
+    promptTokens: number
+    responseTokens: number
+    cacheReadTokens: number
+    cacheCreationTokens: number
+  }>()
+
+  for (const row of rows) {
+    const existing = aggregated.get(row.promptId)
+    if (existing) {
+      existing.promptTokens += row.promptTokens
+      existing.responseTokens += row.responseTokens
+      existing.cacheReadTokens += row.cacheReadTokens
+      existing.cacheCreationTokens += row.cacheCreationTokens
+      if (row.createdAt < existing.createdAt) existing.createdAt = row.createdAt
+      continue
+    }
+
+    aggregated.set(row.promptId, {
+      createdAt: row.createdAt,
+      promptTokens: row.promptTokens,
+      responseTokens: row.responseTokens,
+      cacheReadTokens: row.cacheReadTokens,
+      cacheCreationTokens: row.cacheCreationTokens
+    })
+  }
+
+  return [...aggregated.values()].map((row, index) => ({
+    label: `Prompt#${index + 1}`,
+    at: row.createdAt,
+    weightedTokens: weightTokens({
+      prompt: row.promptTokens,
+      response: row.responseTokens,
+      cacheRead: row.cacheReadTokens,
+      cacheCreation: row.cacheCreationTokens
+    })
+  }))
+}
+
+async function loadPromptRows(sessionId: string, promptId: string): Promise<ChartRow[]> {
+  const db = useDb()
+  const rows = await db
+    .select()
+    .from(prompts)
+    .where(and(eq(prompts.sessionId, sessionId), eq(prompts.promptId, promptId)))
+    .orderBy(asc(prompts.createdAt))
+
+  return rows.map((row, index) => ({
+    label: `ApiCall#${index + 1}`,
+    at: row.createdAt,
+    weightedTokens: weightTokens({
+      prompt: row.promptTokens,
+      response: row.responseTokens,
+      cacheRead: row.cacheReadTokens,
+      cacheCreation: row.cacheCreationTokens
+    })
+  }))
+}
+
+export async function getUsageChartData(params: {
+  page: UsageChartPage
+  sessionId?: string
+  promptId?: string
+}): Promise<UsageChartResponse> {
+  if (params.page === 'main') {
+    return buildChart(await loadMainRows(), 'main')
+  }
+
+  if (params.page === 'session') {
+    if (!params.sessionId) throw createError({ statusCode: 400, message: 'sessionId required' })
+    return buildChart(await loadSessionRows(params.sessionId), 'session')
+  }
+
+  if (!params.sessionId || !params.promptId) {
+    throw createError({ statusCode: 400, message: 'sessionId and promptId required' })
+  }
+
+  return buildChart(await loadPromptRows(params.sessionId, params.promptId), 'prompt')
+}
