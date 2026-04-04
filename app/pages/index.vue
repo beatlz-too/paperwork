@@ -1,18 +1,61 @@
 <script lang="ts" setup>
 import type { TableColumn, TableRow } from '@nuxt/ui'
-import type { BreakdownChartResponse, Session, UsageChartResponse } from '#shared/types'
+import type { BreakdownChartResponse, ProjectSummary, Session, UsageChartDimension, UsageChartResponse } from '#shared/types'
 
 useSeoMeta({ title: 'Sessions – Paperwork' })
 
+const dimension = ref<UsageChartDimension>('session')
+
 const { data: sessions, status } = await useFetch<Session[]>('/api/sessions')
+
+const projectData = computed<ProjectSummary[]>(() => {
+  if (!sessions.value) return []
+
+  const grouped = new Map<string, ProjectSummary>()
+
+  for (const session of sessions.value) {
+    const key = session.projectName?.trim() || 'other'
+    const existing = grouped.get(key)
+
+    if (existing) {
+      existing.sessionCount++
+      existing.requestTokensTotal += session.requestTokensTotal
+      existing.responseTokensTotal += session.responseTokensTotal
+      existing.cacheReadTokensTotal += session.cacheReadTokensTotal
+      existing.cacheCreationTokensTotal += session.cacheCreationTokensTotal
+      if (session.lastUsedAt > existing.lastUsedAt) existing.lastUsedAt = session.lastUsedAt
+      if (session.createdAt < existing.createdAt) existing.createdAt = session.createdAt
+    }
+    else {
+      grouped.set(key, {
+        projectName: key,
+        sessionCount: 1,
+        requestTokensTotal: session.requestTokensTotal,
+        responseTokensTotal: session.responseTokensTotal,
+        cacheReadTokensTotal: session.cacheReadTokensTotal,
+        cacheCreationTokensTotal: session.cacheCreationTokensTotal,
+        createdAt: session.createdAt,
+        lastUsedAt: session.lastUsedAt
+      })
+    }
+  }
+
+  return [...grouped.values()].sort((a, b) =>
+    new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime()
+  )
+})
+
+const tableData = computed<Session[] | ProjectSummary[]>(() =>
+  dimension.value === 'project' ? projectData.value : (sessions.value ?? [])
+)
 const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
-  query: { page: 'main' }
+  query: { page: 'main', dimension }
 })
 const { data: breakdownData, status: breakdownStatus } = await useFetch<BreakdownChartResponse>('/api/charts', {
   query: { page: 'main', kind: 'breakdown' }
 })
 
-const columns: TableColumn<Session>[] = [
+const sessionColumns: TableColumn<Session>[] = [
   { accessorKey: 'projectName', header: 'Project' },
   { accessorKey: 'name', header: 'Session Name' },
   { accessorKey: 'sessionId', header: 'Session ID' },
@@ -23,6 +66,19 @@ const columns: TableColumn<Session>[] = [
   { accessorKey: 'createdAt', header: 'Created (UTC)' },
   { accessorKey: 'lastUsedAt', header: 'Last Used (UTC)' }
 ]
+
+const projectColumns: TableColumn<ProjectSummary>[] = [
+  { accessorKey: 'projectName', header: 'Project' },
+  { accessorKey: 'sessionCount', header: 'Sessions' },
+  { accessorKey: 'requestTokensTotal', header: 'Input Tokens' },
+  { accessorKey: 'responseTokensTotal', header: 'Output Tokens' },
+  { accessorKey: 'cacheReadTokensTotal', header: 'Cache Read' },
+  { accessorKey: 'cacheCreationTokensTotal', header: 'Cache Write' },
+  { accessorKey: 'createdAt', header: 'Created (UTC)' },
+  { accessorKey: 'lastUsedAt', header: 'Last Used (UTC)' }
+]
+
+const columns = computed(() => dimension.value === 'project' ? projectColumns : sessionColumns)
 
 function formatDate(value: string | null): string {
   if (!value) return '—'
@@ -39,6 +95,10 @@ const router = useRouter()
 function onSelect(_e: Event, row: TableRow<Session>) {
   router.push(`/sessions/${row.original.sessionId}`)
 }
+
+function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
+  router.push(`/projects/${encodeURIComponent((row.original as ProjectSummary).projectName)}`)
+}
 </script>
 
 <template>
@@ -50,6 +110,24 @@ function onSelect(_e: Event, row: TableRow<Session>) {
       <p class="text-muted mt-1">
         Token usage breakdown per session
       </p>
+    </div>
+
+    <div class="mb-4 flex items-center gap-2">
+      <span class="text-sm text-muted">View by</span>
+      <UButtonGroup size="sm">
+        <UButton
+          :variant="dimension === 'session' ? 'solid' : 'outline'"
+          @click="dimension = 'session'"
+        >
+          Sessions
+        </UButton>
+        <UButton
+          :variant="dimension === 'project' ? 'solid' : 'outline'"
+          @click="dimension = 'project'"
+        >
+          Projects
+        </UButton>
+      </UButtonGroup>
     </div>
 
     <div class="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -99,22 +177,26 @@ function onSelect(_e: Event, row: TableRow<Session>) {
     </div>
 
     <UTable
-      :data="sessions ?? []"
+      :data="tableData"
       :columns="columns"
       :loading="status === 'pending'"
       class="cursor-pointer"
-      :on-select="onSelect"
+      :on-select="dimension === 'session' ? onSelect : onProjectSelect"
     >
       <template #projectName-cell="{ row }">
         <span class="text-sm">{{ row.original.projectName || '—' }}</span>
       </template>
 
       <template #name-cell="{ row }">
-        <span class="font-medium">{{ row.original.name || '(unnamed)' }}</span>
+        <span class="font-medium">{{ (row.original as Session).name || '(unnamed)' }}</span>
       </template>
 
       <template #sessionId-cell="{ row }">
-        <UuidDisplay :uuid="row.original.sessionId" />
+        <UuidDisplay :uuid="(row.original as Session).sessionId" />
+      </template>
+
+      <template #sessionCount-cell="{ row }">
+        {{ (row.original as ProjectSummary).sessionCount.toLocaleString() }}
       </template>
 
       <template #requestTokensTotal-cell="{ row }">

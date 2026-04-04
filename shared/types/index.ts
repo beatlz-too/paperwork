@@ -11,6 +11,17 @@ export interface Session {
   lastUsedAt: string
 }
 
+export interface ProjectSummary {
+  projectName: string
+  sessionCount: number
+  requestTokensTotal: number
+  responseTokensTotal: number
+  cacheReadTokensTotal: number
+  cacheCreationTokensTotal: number
+  createdAt: string
+  lastUsedAt: string
+}
+
 export interface Prompt {
   id: string
   sessionId: string
@@ -35,6 +46,7 @@ export interface AggregatedPrompt {
 
 export type UsageChartPage = 'main' | 'session' | 'prompt'
 export type UsageChartKind = 'stacked' | 'breakdown'
+export type UsageChartDimension = 'session' | 'project'
 
 export interface UsageChartWeights {
   prompt: number

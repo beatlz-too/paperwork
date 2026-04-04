@@ -1,9 +1,10 @@
-import { and, asc, eq, sum } from 'drizzle-orm'
+import { and, asc, eq, isNull, or, sum } from 'drizzle-orm'
 import { prompts, sessions } from '#server/db/schema'
 import { useDb } from '#server/db/client'
 import type {
   BreakdownChartResponse,
   UsageChartDataset,
+  UsageChartDimension,
   UsageChartPage,
   UsageChartResponse,
   UsageChartWeights
@@ -89,9 +90,19 @@ function buildChart(rows: ChartRow[], page: UsageChartPage): UsageChartResponse 
   }
 }
 
-async function loadMainRows(): Promise<ChartRow[]> {
+function projectCondition(projectName: string) {
+  return projectName === 'other'
+    ? or(isNull(sessions.projectName), eq(sessions.projectName, ''))
+    : eq(sessions.projectName, projectName)
+}
+
+async function loadMainRows(projectName?: string): Promise<ChartRow[]> {
   const db = useDb()
-  const rows = await db.select().from(sessions).orderBy(asc(sessions.createdAt))
+  const rows = await db
+    .select()
+    .from(sessions)
+    .where(projectName ? projectCondition(projectName) : undefined)
+    .orderBy(asc(sessions.createdAt))
 
   return rows.map(row => ({
     label: row.name || row.sessionId.slice(0, 8),
@@ -102,6 +113,37 @@ async function loadMainRows(): Promise<ChartRow[]> {
       cacheRead: row.cacheReadTokensTotal,
       cacheCreation: row.cacheCreationTokensTotal
     })
+  }))
+}
+
+async function loadMainProjectRows(): Promise<ChartRow[]> {
+  const db = useDb()
+  const rows = await db.select().from(sessions).orderBy(asc(sessions.createdAt))
+
+  const grouped = new Map<string, { weightedTokens: number, at: Date }>()
+
+  for (const row of rows) {
+    const key = row.projectName?.trim() || 'other'
+    const wt = weightTokens({
+      prompt: row.requestTokensTotal,
+      response: row.responseTokensTotal,
+      cacheRead: row.cacheReadTokensTotal,
+      cacheCreation: row.cacheCreationTokensTotal
+    })
+    const existing = grouped.get(key)
+    if (existing) {
+      existing.weightedTokens += wt
+      if (row.lastUsedAt > existing.at) existing.at = row.lastUsedAt
+    }
+    else {
+      grouped.set(key, { weightedTokens: wt, at: row.lastUsedAt })
+    }
+  }
+
+  return [...grouped.entries()].map(([label, { weightedTokens, at }]) => ({
+    label,
+    at,
+    weightedTokens
   }))
 }
 
@@ -176,7 +218,7 @@ async function loadPromptRows(sessionId: string, promptId: string): Promise<Char
 const BREAKDOWN_LABELS = ['Input', 'Output', 'Cache Read', 'Cache Write']
 const BREAKDOWN_COLORS = ['#2563eb', '#0f766e', '#16a34a', '#ca8a04']
 
-async function loadBreakdownTotals(page: UsageChartPage, sessionId?: string, promptId?: string): Promise<number[]> {
+async function loadBreakdownTotals(page: UsageChartPage, sessionId?: string, promptId?: string, projectName?: string): Promise<number[]> {
   const db = useDb()
 
   if (page === 'main') {
@@ -185,7 +227,9 @@ async function loadBreakdownTotals(page: UsageChartPage, sessionId?: string, pro
       responseTotal: sum(sessions.responseTokensTotal),
       cacheReadTotal: sum(sessions.cacheReadTokensTotal),
       cacheCreationTotal: sum(sessions.cacheCreationTokensTotal)
-    }).from(sessions)
+    })
+      .from(sessions)
+      .where(projectName ? projectCondition(projectName) : undefined)
 
     return [
       (Number(row?.promptTotal ?? 0)) * TOKEN_WEIGHTS.prompt,
@@ -218,8 +262,9 @@ export async function getBreakdownChartData(params: {
   page: UsageChartPage
   sessionId?: string
   promptId?: string
+  projectName?: string
 }): Promise<BreakdownChartResponse> {
-  const data = await loadBreakdownTotals(params.page, params.sessionId, params.promptId)
+  const data = await loadBreakdownTotals(params.page, params.sessionId, params.promptId, params.projectName)
 
   return {
     page: params.page,
@@ -241,9 +286,14 @@ export async function getUsageChartData(params: {
   page: UsageChartPage
   sessionId?: string
   promptId?: string
+  dimension?: UsageChartDimension
+  projectName?: string
 }): Promise<UsageChartResponse> {
   if (params.page === 'main') {
-    return buildChart(await loadMainRows(), 'main')
+    const rows = params.dimension === 'project'
+      ? await loadMainProjectRows()
+      : await loadMainRows(params.projectName)
+    return buildChart(rows, 'main')
   }
 
   if (params.page === 'session') {
