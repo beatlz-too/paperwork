@@ -20,10 +20,11 @@ export default defineEventHandler(async (event) => {
   const sessionId = query.sessionId ? String(query.sessionId) : undefined
 
   if (kind === 'breakdown') {
-    if (page === 'prompt') {
-      throw createError({ statusCode: 400, message: 'breakdown chart is not available for prompt page' })
-    }
-    return getBreakdownChartData({ page, sessionId })
+    return getBreakdownChartData({
+      page,
+      sessionId,
+      promptId: query.promptId ? String(query.promptId) : undefined
+    })
   }
 
   return getUsageChartData({

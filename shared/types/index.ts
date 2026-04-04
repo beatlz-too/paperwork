@@ -72,7 +72,7 @@ export interface BreakdownChartDataset {
 }
 
 export interface BreakdownChartResponse {
-  page: Exclude<UsageChartPage, 'prompt'>
+  page: UsageChartPage
   labels: string[]
   datasets: BreakdownChartDataset[]
   weights: UsageChartWeights

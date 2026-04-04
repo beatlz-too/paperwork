@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { TableColumn } from '@nuxt/ui'
-import type { AggregatedPrompt, Prompt, UsageChartResponse } from '#shared/types'
+import type { AggregatedPrompt, BreakdownChartResponse, Prompt, UsageChartResponse } from '#shared/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -27,6 +27,14 @@ const { data: apiCalls, status } = await useFetch<Prompt[]>(
 const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
   query: computed(() => ({
     page: 'prompt' as const,
+    sessionId,
+    promptId: promptId.value
+  }))
+})
+const { data: breakdownData, status: breakdownStatus } = await useFetch<BreakdownChartResponse>('/api/charts', {
+  query: computed(() => ({
+    page: 'prompt' as const,
+    kind: 'breakdown',
     sessionId,
     promptId: promptId.value
   }))
@@ -154,27 +162,51 @@ function navigate(p: AggregatedPrompt) {
       </UCard>
     </div>
 
-    <UCard class="mb-6">
-      <template #header>
-        <div>
-          <h2 class="text-base font-semibold">
-            API Call Usage Over Time
-          </h2>
-          <p class="text-sm text-muted">
-            Stacked bars by table row with backend-weighted token totals.
-          </p>
-        </div>
-      </template>
+    <div class="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <UCard>
+        <template #header>
+          <div>
+            <h2 class="text-base font-semibold">
+              API Call Usage Over Time
+            </h2>
+            <p class="text-sm text-muted">
+              Stacked bars by table row with backend-weighted token totals.
+            </p>
+          </div>
+        </template>
 
-      <USkeleton
-        v-if="chartStatus === 'pending'"
-        class="h-[320px] w-full"
-      />
-      <UsageStackedBarChart
-        v-else-if="chartData"
-        :chart-data="chartData"
-      />
-    </UCard>
+        <USkeleton
+          v-if="chartStatus === 'pending'"
+          class="h-[320px] w-full"
+        />
+        <UsageStackedBarChart
+          v-else-if="chartData"
+          :chart-data="chartData"
+        />
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <div>
+            <h2 class="text-base font-semibold">
+              Token Type Breakdown
+            </h2>
+            <p class="text-sm text-muted">
+              Total weighted expenditure per token type for this prompt.
+            </p>
+          </div>
+        </template>
+
+        <USkeleton
+          v-if="breakdownStatus === 'pending'"
+          class="h-[320px] w-full"
+        />
+        <UsageBreakdownBarChart
+          v-else-if="breakdownData"
+          :chart-data="breakdownData"
+        />
+      </UCard>
+    </div>
 
     <!-- Per-API-call breakdown -->
     <h2 class="text-lg font-semibold mb-3">

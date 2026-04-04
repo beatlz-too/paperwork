@@ -176,7 +176,7 @@ async function loadPromptRows(sessionId: string, promptId: string): Promise<Char
 const BREAKDOWN_LABELS = ['Input', 'Output', 'Cache Read', 'Cache Write']
 const BREAKDOWN_COLORS = ['#2563eb', '#0f766e', '#16a34a', '#ca8a04']
 
-async function loadBreakdownTotals(page: Exclude<UsageChartPage, 'prompt'>, sessionId?: string): Promise<number[]> {
+async function loadBreakdownTotals(page: UsageChartPage, sessionId?: string, promptId?: string): Promise<number[]> {
   const db = useDb()
 
   if (page === 'main') {
@@ -195,12 +195,16 @@ async function loadBreakdownTotals(page: Exclude<UsageChartPage, 'prompt'>, sess
     ]
   }
 
+  const condition = page === 'prompt'
+    ? and(eq(prompts.sessionId, sessionId!), eq(prompts.promptId, promptId!))
+    : eq(prompts.sessionId, sessionId!)
+
   const [row] = await db.select({
     promptTotal: sum(prompts.promptTokens),
     responseTotal: sum(prompts.responseTokens),
     cacheReadTotal: sum(prompts.cacheReadTokens),
     cacheCreationTotal: sum(prompts.cacheCreationTokens)
-  }).from(prompts).where(eq(prompts.sessionId, sessionId!))
+  }).from(prompts).where(condition)
 
   return [
     (Number(row?.promptTotal ?? 0)) * TOKEN_WEIGHTS.prompt,
@@ -211,10 +215,11 @@ async function loadBreakdownTotals(page: Exclude<UsageChartPage, 'prompt'>, sess
 }
 
 export async function getBreakdownChartData(params: {
-  page: Exclude<UsageChartPage, 'prompt'>
+  page: UsageChartPage
   sessionId?: string
+  promptId?: string
 }): Promise<BreakdownChartResponse> {
-  const data = await loadBreakdownTotals(params.page, params.sessionId)
+  const data = await loadBreakdownTotals(params.page, params.sessionId, params.promptId)
 
   return {
     page: params.page,
