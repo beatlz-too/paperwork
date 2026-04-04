@@ -46,7 +46,7 @@ function rgba(hex: string, alpha: number): string {
 }
 
 function formatLabel(date: Date): string {
-  return date.toISOString().replace('T', ' ').replace('.000Z', ' UTC')
+  return date.toISOString()
 }
 
 function weightTokens(values: {
