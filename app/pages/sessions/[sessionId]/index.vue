@@ -95,8 +95,12 @@ function onNameKeydown(e: KeyboardEvent) {
         >
           {{ session?.name || '(unnamed session)' }}
         </h1>
-        <div class="mt-1">
+        <div class="mt-1 flex items-center gap-2">
           <UuidDisplay :uuid="sessionId" />
+          <span
+            v-if="session?.projectName"
+            class="text-sm text-muted"
+          >· {{ session.projectName }}</span>
         </div>
       </div>
     </div>

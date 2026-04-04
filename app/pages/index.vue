@@ -13,6 +13,7 @@ const { data: breakdownData, status: breakdownStatus } = await useFetch<Breakdow
 })
 
 const columns: TableColumn<Session>[] = [
+  { accessorKey: 'projectName', header: 'Project' },
   { accessorKey: 'name', header: 'Session Name' },
   { accessorKey: 'sessionId', header: 'Session ID' },
   { accessorKey: 'requestTokensTotal', header: 'Input Tokens' },
@@ -104,6 +105,10 @@ function onSelect(_e: Event, row: TableRow<Session>) {
       class="cursor-pointer"
       :on-select="onSelect"
     >
+      <template #projectName-cell="{ row }">
+        <span class="text-sm">{{ row.original.projectName || '—' }}</span>
+      </template>
+
       <template #name-cell="{ row }">
         <span class="font-medium">{{ row.original.name || '(unnamed)' }}</span>
       </template>

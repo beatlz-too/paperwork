@@ -154,7 +154,7 @@ async function processLogRecord(record: LogRecord, resourceAttrs?: KeyValue[]): 
   const attrs = record.attributes ?? []
 
   if (DEBUG) {
-    console.log('[debug] log record:', JSON.stringify({ body: record.body, attributes: attrs }, null, 2))
+    console.log('[debug] log record:', JSON.stringify({ body: record.body, attributes: attrs, resourceAttrs }, null, 2))
   }
 
   const eventName = String(kvAttr(attrs, 'event.name') ?? '')
@@ -242,13 +242,11 @@ function nanosToDate(nanos: string): Date {
 // Span processing
 // ---------------------------------------------------------------------------
 
-async function processSpan(span: Span): Promise<void> {
+async function processSpan(span: Span, resourceAttrs?: KeyValue[]): Promise<void> {
   const spanName = span.name
 
   // ------------------------------------------------------------------
   // Session lifecycle spans
-  // Claude Code emits a "session" root span that wraps the whole session.
-  // Name: "claude_code.session" or similar.
   // ------------------------------------------------------------------
   if (spanName === 'session' || spanName === 'claude_code.session') {
     const sessionId = String(attr(span, 'session.id') ?? attr(span, 'claude.session_id') ?? '')
@@ -260,12 +258,7 @@ async function processSpan(span: Span): Promise<void> {
 
     await db
       .insert(sessions)
-      .values({
-        sessionId,
-        name,
-        createdAt: startedAt,
-        lastUsedAt: startedAt
-      })
+      .values({ sessionId, name, createdAt: startedAt, lastUsedAt: startedAt })
       .onConflictDoUpdate({
         target: sessions.sessionId,
         set: {
@@ -280,8 +273,6 @@ async function processSpan(span: Span): Promise<void> {
 
   // ------------------------------------------------------------------
   // Per-prompt / LLM call spans
-  // Claude Code emits one span per API call with gen_ai semantic conventions.
-  // Name: "inference", "llm.call", "claude_code.llm_call", etc.
   // ------------------------------------------------------------------
   const inputTokens =
     Number(attr(span, 'gen_ai.usage.input_tokens') ?? attr(span, 'llm.usage.prompt_tokens') ?? 0)
@@ -307,15 +298,9 @@ async function processSpan(span: Span): Promise<void> {
 
   const createdAt = nanosToDate(span.startTimeUnixNano)
 
-  // Ensure the session row exists (may have been created before collector started)
   await db
     .insert(sessions)
-    .values({
-      sessionId,
-      name: '',
-      createdAt,
-      lastUsedAt: createdAt
-    })
+    .values({ sessionId, name: '', createdAt, lastUsedAt: createdAt })
     .onConflictDoUpdate({
       target: sessions.sessionId,
       set: {
@@ -325,7 +310,6 @@ async function processSpan(span: Span): Promise<void> {
       }
     })
 
-  // Update token totals on the session
   await db
     .update(sessions)
     .set({
@@ -335,7 +319,6 @@ async function processSpan(span: Span): Promise<void> {
     })
     .where(eq(sessions.sessionId, sessionId))
 
-  // Insert the prompt row
   await db.insert(prompts).values({
     sessionId,
     prompt: promptText,
@@ -359,18 +342,21 @@ const DEBUG = process.env.DEBUG_OTEL_COLLECTOR === '1' || process.env.DEBUG === 
 
 const ExportTraceServiceRequest = getExportRequestProto(ServiceClientType.SPANS)
 
-function extractSpans(body: OtlpTracesPayload): Span[] {
+function extractSpans(body: OtlpTracesPayload): Array<{ span: Span; resourceAttrs?: KeyValue[] }> {
   const resourceSpans = body.resourceSpans ?? []
-  const spans: Span[] = []
+  const result: Array<{ span: Span; resourceAttrs?: KeyValue[] }> = []
 
   for (const rs of resourceSpans as any[]) {
+    const resourceAttrs = rs.resource?.attributes as KeyValue[] | undefined
     const scopeSpans = rs.scopeSpans ?? rs.instrumentationLibrarySpans ?? []
     for (const ss of scopeSpans as any[]) {
-      for (const span of (ss.spans ?? []) as any[]) spans.push(span as Span)
+      for (const span of (ss.spans ?? []) as any[]) {
+        result.push({ span: span as Span, resourceAttrs })
+      }
     }
   }
 
-  return spans
+  return result
 }
 
 function parseOtlpTracesFromBuffer(
@@ -379,7 +365,6 @@ function parseOtlpTracesFromBuffer(
 ): { ok: true; body: OtlpTracesPayload } | { ok: false; error: string } {
   const u8 = new Uint8Array(buf)
 
-  // Prefer JSON when explicitly requested.
   if (contentType.includes('json')) {
     try {
       const text = new TextDecoder().decode(u8)
@@ -389,7 +374,6 @@ function parseOtlpTracesFromBuffer(
     }
   }
 
-  // Otherwise, assume protobuf (most common for OTLP/HTTP).
   try {
     const msg = ExportTraceServiceRequest.decode(u8)
     const obj = ExportTraceServiceRequest.toObject(msg, {
@@ -399,7 +383,6 @@ function parseOtlpTracesFromBuffer(
     }) as unknown as OtlpTracesPayload
     return { ok: true, body: obj }
   } catch (e) {
-    // Fallback: try JSON anyway (some clients omit content-type).
     try {
       const text = new TextDecoder().decode(u8)
       return { ok: true, body: JSON.parse(text) as OtlpTracesPayload }
@@ -414,7 +397,6 @@ const server = Bun.serve({
   async fetch(req) {
     const url = new URL(req.url)
 
-    // OTLP traces endpoint
     if (req.method === 'POST' && url.pathname === '/v1/traces') {
       const contentType = (req.headers.get('content-type') ?? '').toLowerCase()
       const buf = await req.arrayBuffer()
@@ -434,12 +416,12 @@ const server = Bun.serve({
 
       if (DEBUG) {
         console.log(`[otel] received /v1/traces spans=${spans.length} content-type="${contentType || '(missing)'}" bytes=${buf.byteLength}`)
-        for (const span of spans) {
+        for (const { span } of spans) {
           console.log('[debug] span:', JSON.stringify({ name: span.name, attributes: span.attributes }, null, 2))
         }
       }
 
-      const results = await Promise.allSettled(spans.map(processSpan))
+      const results = await Promise.allSettled(spans.map(({ span, resourceAttrs }) => processSpan(span, resourceAttrs)))
       for (const r of results) {
         if (r.status === 'rejected') {
           console.error('[otel] span processing failed:', r.reason)
@@ -451,7 +433,6 @@ const server = Bun.serve({
       })
     }
 
-    // OTLP logs endpoint
     if (req.method === 'POST' && url.pathname === '/v1/logs') {
       const text = await req.text()
       try {
@@ -475,7 +456,6 @@ const server = Bun.serve({
       return new Response(JSON.stringify({}), { headers: { 'Content-Type': 'application/json' } })
     }
 
-    // OTLP metrics endpoint
     if (req.method === 'POST' && url.pathname === '/v1/metrics') {
       const text = await req.text()
       try {
@@ -487,7 +467,6 @@ const server = Bun.serve({
       return new Response(JSON.stringify({}), { headers: { 'Content-Type': 'application/json' } })
     }
 
-    // Health check
     if (req.method === 'GET' && url.pathname === '/health') {
       return new Response('ok')
     }
@@ -501,7 +480,6 @@ const server = Bun.serve({
 console.log(`OTel collector listening on http://localhost:${PORT}`)
 console.log('Waiting for Claude Code telemetry spans...')
 
-// Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\nShutting down...')
   server.stop()
