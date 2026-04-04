@@ -1,0 +1,38 @@
+{
+  "name": "paperwork",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "typecheck": "nuxt typecheck",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun run scripts/migrate.ts",
+    "db:push": "drizzle-kit push",
+    "telemetry": "bun run scripts/otel-collector.ts",
+    "generate-keys": "bun run scripts/generate-keys.ts"
+  },
+  "dependencies": {
+    "@iconify-json/lucide": "^1.2.100",
+    "@iconify-json/simple-icons": "^1.2.75",
+    "@nuxt/ui": "^4.6.0",
+    "@opentelemetry/otlp-proto-exporter-base": "^0.51.1",
+    "@opentelemetry/otlp-transformer": "^0.214.0",
+    "drizzle-orm": "^0.42.0",
+    "nuxt": "^4.4.2",
+    "postgres": "^3.4.5",
+    "tailwindcss": "^4.2.2"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.15.2",
+    "@types/node": "^25.5.2",
+    "drizzle-kit": "^0.31.0",
+    "eslint": "^10.1.0",
+    "typescript": "^6.0.2",
+    "vue-tsc": "^3.2.6"
+  },
+  "packageManager": "bun@1.2.0"
+}
