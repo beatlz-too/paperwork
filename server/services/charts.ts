@@ -14,6 +14,7 @@ type ChartRow = {
   label: string
   at: Date
   weightedTokens: number
+  route?: string
 }
 
 const TOKEN_WEIGHTS: UsageChartWeights = {
@@ -73,6 +74,7 @@ function buildChart(rows: ChartRow[], page: UsageChartPage): UsageChartResponse 
     return {
       label: row.label,
       data: labels.map((_, labelIndex) => labelIndex >= index ? row.weightedTokens : 0),
+      route: row.route,
       borderColor: color,
       backgroundColor: rgba(color, 0.18),
       stack: 'usage',
@@ -107,6 +109,7 @@ async function loadMainRows(projectName?: string): Promise<ChartRow[]> {
   return rows.map(row => ({
     label: row.name || row.sessionId.slice(0, 8),
     at: row.lastUsedAt,
+    route: `/sessions/${row.sessionId}`,
     weightedTokens: weightTokens({
       prompt: row.requestTokensTotal,
       response: row.responseTokensTotal,
@@ -134,8 +137,7 @@ async function loadMainProjectRows(): Promise<ChartRow[]> {
     if (existing) {
       existing.weightedTokens += wt
       if (row.lastUsedAt > existing.at) existing.at = row.lastUsedAt
-    }
-    else {
+    } else {
       grouped.set(key, { weightedTokens: wt, at: row.lastUsedAt })
     }
   }
@@ -143,6 +145,7 @@ async function loadMainProjectRows(): Promise<ChartRow[]> {
   return [...grouped.entries()].map(([label, { weightedTokens, at }]) => ({
     label,
     at,
+    route: `/projects/${encodeURIComponent(label)}`,
     weightedTokens
   }))
 }
@@ -156,6 +159,7 @@ async function loadSessionRows(sessionId: string): Promise<ChartRow[]> {
     .orderBy(asc(prompts.createdAt))
 
   const aggregated = new Map<string, {
+    promptId: string
     createdAt: Date
     promptTokens: number
     responseTokens: number
@@ -175,6 +179,7 @@ async function loadSessionRows(sessionId: string): Promise<ChartRow[]> {
     }
 
     aggregated.set(row.promptId, {
+      promptId: row.promptId,
       createdAt: row.createdAt,
       promptTokens: row.promptTokens,
       responseTokens: row.responseTokens,
@@ -186,6 +191,7 @@ async function loadSessionRows(sessionId: string): Promise<ChartRow[]> {
   return [...aggregated.values()].map((row, index) => ({
     label: `Prompt #${index + 1}`,
     at: row.createdAt,
+    route: `/sessions/${sessionId}/prompts/${row.promptId}`,
     weightedTokens: weightTokens({
       prompt: row.promptTokens,
       response: row.responseTokens,

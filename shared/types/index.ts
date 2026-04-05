@@ -60,6 +60,7 @@ export interface UsageChartWeights {
 export interface UsageChartDataset {
   label: string
   data: number[]
+  route?: string
   borderColor: string
   backgroundColor: string
   stack: string

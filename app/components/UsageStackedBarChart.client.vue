@@ -1,7 +1,7 @@
 <script lang="ts" setup>
+import type { ChartDataset, ChartData, ChartOptions } from 'chart.js'
 import { Bar } from 'vue-chartjs'
 import 'chart.js/auto'
-import type { ChartData, ChartOptions } from 'chart.js'
 import type { UsageChartResponse } from '#shared/types'
 
 const props = defineProps<{
@@ -9,6 +9,10 @@ const props = defineProps<{
 }>()
 
 const data = computed(() => props.chartData as ChartData<'bar'>)
+const router = useRouter()
+const hasClickableSegments = computed(() => props.chartData.datasets.some(dataset => Boolean(dataset.route)))
+
+type ClickableBarDataset = ChartDataset<'bar'> & { route?: string }
 
 function formatAxisLabel(value: string): string {
   const date = new Date(value)
@@ -39,6 +43,16 @@ const options = computed<ChartOptions<'bar'>>(() => ({
         }
       }
     }
+  },
+  onClick(_event, elements, chart) {
+    const element = elements[0]
+    if (!element) return
+
+    const dataset = chart.data.datasets[element.datasetIndex] as ClickableBarDataset | undefined
+    const route = dataset?.route
+    if (!route) return
+
+    router.push(route)
   },
   scales: {
     x: {
@@ -72,7 +86,7 @@ const options = computed<ChartOptions<'bar'>>(() => ({
 </script>
 
 <template>
-  <div class="h-[320px] w-full">
+  <div :class="['h-[320px] w-full', hasClickableSegments ? 'cursor-pointer' : '']">
     <Bar
       :data="data"
       :options="options"
