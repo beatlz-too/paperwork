@@ -55,6 +55,7 @@ useSeoMeta({ title: computed(() => `Prompt ${promptId.value.slice(0, 8)}… – 
 const columns: TableColumn<ApiCallRow>[] = [
   { accessorKey: 'callNumber', header: sortableHeader<ApiCallRow>('Call #') },
   { accessorKey: 'createdAt', header: sortableHeader<ApiCallRow>('Time') },
+  { accessorKey: 'toolName', header: sortableHeader<ApiCallRow>('Tool') },
   { accessorKey: 'promptTokens', header: sortableHeader<ApiCallRow>('Input') },
   { accessorKey: 'responseTokens', header: sortableHeader<ApiCallRow>('Output') },
   { accessorKey: 'cacheReadTokens', header: sortableHeader<ApiCallRow>('Cache Read') },
@@ -66,6 +67,10 @@ const sorting = ref([{ id: 'callNumber', desc: false }])
 function formatTokens(n: number | null): string {
   if (n == null) return '—'
   return n.toLocaleString()
+}
+
+function formatToolName(name: string | null | undefined): string {
+  return name?.trim() || '—'
 }
 
 function formatTime(iso: string): string {
@@ -95,6 +100,12 @@ function navigate(p: AggregatedPrompt) {
           </div>
           <p class="text-muted text-sm mt-0.5">
             {{ currentIndex >= 0 ? `Prompt ${currentIndex + 1} of ${allPrompts?.length}` : '' }}
+          </p>
+          <p
+            v-if="current?.toolNames?.length"
+            class="text-muted text-sm mt-0.5"
+          >
+            Tools: {{ current.toolNames.join(' · ') }}
           </p>
         </div>
       </div>
@@ -222,14 +233,14 @@ function navigate(p: AggregatedPrompt) {
     </div>
 
     <!-- Per-API-call breakdown -->
-  <h2 class="text-lg font-semibold mb-3">
+    <h2 class="text-lg font-semibold mb-3">
       API Call Breakdown
     </h2>
     <UTable
+      v-model:sorting="sorting"
       :data="apiCallRows"
       :columns="columns"
       :loading="status === 'pending'"
-      v-model:sorting="sorting"
     >
       <template #callNumber-cell="{ row }">
         {{ row.original.callNumber }}
@@ -238,6 +249,11 @@ function navigate(p: AggregatedPrompt) {
       <template #createdAt-cell="{ row }">
         <span class="text-sm text-muted">{{ formatTime(row.original.createdAt) }}</span>
       </template>
+
+      <template #toolName-cell="{ row }">
+        {{ formatToolName(row.original.toolName) }}
+      </template>
+
       <template #promptTokens-cell="{ row }">
         {{ formatTokens(row.original.promptTokens) }}
       </template>

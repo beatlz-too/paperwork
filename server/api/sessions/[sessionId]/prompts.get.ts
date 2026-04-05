@@ -17,6 +17,7 @@ export default defineEventHandler(async (event) => {
   const map = new Map<string, {
     promptId: string
     apiCalls: number
+    toolNames: string[]
     promptTokens: number
     responseTokens: number
     cacheReadTokens: number
@@ -29,6 +30,9 @@ export default defineEventHandler(async (event) => {
     const existing = map.get(key)
     if (existing) {
       existing.apiCalls++
+      if (row.toolName && !existing.toolNames.includes(row.toolName)) {
+        existing.toolNames.push(row.toolName)
+      }
       existing.promptTokens += row.promptTokens
       existing.responseTokens += row.responseTokens
       existing.cacheReadTokens += row.cacheReadTokens
@@ -37,6 +41,7 @@ export default defineEventHandler(async (event) => {
       map.set(key, {
         promptId: key,
         apiCalls: 1,
+        toolNames: row.toolName ? [row.toolName] : [],
         promptTokens: row.promptTokens,
         responseTokens: row.responseTokens,
         cacheReadTokens: row.cacheReadTokens,

@@ -26,6 +26,7 @@ export interface Prompt {
   id: string
   sessionId: string
   prompt: string
+  toolName: string
   promptTokens: number
   requestTokens: number
   responseTokens: number
@@ -37,6 +38,7 @@ export interface Prompt {
 export interface AggregatedPrompt {
   promptId: string
   apiCalls: number
+  toolNames: string[]
   promptTokens: number
   responseTokens: number
   cacheReadTokens: number
