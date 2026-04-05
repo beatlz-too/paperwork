@@ -38,6 +38,7 @@ const columns: TableColumn<PromptRow>[] = [
   { accessorKey: 'promptNumber', header: sortableHeader<PromptRow>('Prompt #') },
   { accessorKey: 'promptId', header: sortableHeader<PromptRow>('Prompt ID') },
   { accessorKey: 'apiCalls', header: sortableHeader<PromptRow>('API Calls') },
+  { accessorKey: 'toolNames', header: sortableHeader<PromptRow>('Tools') },
   { accessorKey: 'promptTokens', header: sortableHeader<PromptRow>('Input') },
   { accessorKey: 'responseTokens', header: sortableHeader<PromptRow>('Output') },
   { accessorKey: 'cacheReadTokens', header: sortableHeader<PromptRow>('Cache Read') },
@@ -277,11 +278,11 @@ function onNameKeydown(e: KeyboardEvent) {
     </div>
 
     <UTable
+      v-model:sorting="sorting"
       :data="promptRows"
       :columns="columns"
       :loading="status === 'pending'"
       class="cursor-pointer"
-      v-model:sorting="sorting"
       :on-select="onSelect"
     >
       <template #promptNumber-cell="{ row }">
@@ -290,6 +291,10 @@ function onNameKeydown(e: KeyboardEvent) {
 
       <template #promptId-cell="{ row }">
         <UuidDisplay :uuid="row.original.promptId" />
+      </template>
+
+      <template #toolNames-cell="{ row }">
+        {{ row.original.toolNames.length ? row.original.toolNames.join(' · ') : '—' }}
       </template>
 
       <template #promptTokens-cell="{ row }">

@@ -35,6 +35,7 @@ if (!DATABASE_URL) {
 
 const client = postgres(DATABASE_URL)
 const db = drizzle(client, { schema: { sessions, prompts } })
+const toolNameByPromptId = new Map<string, string>()
 
 // ---------------------------------------------------------------------------
 // OTLP span types (minimal subset we care about)
@@ -44,7 +45,7 @@ interface KeyValue {
   key: string
   // OTLP JSON mapping represents intValue as a string; protobuf decoding via
   // protobufjs also commonly yields strings when configured with `longs: String`.
-  value: { stringValue?: string; intValue?: number | string; doubleValue?: number; boolValue?: boolean }
+  value: { stringValue?: string, intValue?: number | string, doubleValue?: number, boolValue?: boolean }
 }
 
 interface Span {
@@ -55,15 +56,17 @@ interface Span {
   startTimeUnixNano: string
   endTimeUnixNano?: string
   attributes?: KeyValue[]
-  status?: { code?: number; message?: string }
+  status?: { code?: number, message?: string }
 }
 
 interface ScopeSpans {
-  spans: Span[]
+  spans?: Span[]
 }
 
 interface ResourceSpans {
-  scopeSpans: ScopeSpans[]
+  resource?: { attributes?: KeyValue[] }
+  scopeSpans?: ScopeSpans[]
+  instrumentationLibrarySpans?: ScopeSpans[]
 }
 
 interface OtlpTracesPayload {
@@ -161,17 +164,36 @@ async function processLogRecord(record: LogRecord, resourceAttrs?: KeyValue[]): 
   }
 
   const eventName = String(kvAttr(attrs, 'event.name') ?? '')
-  if (eventName !== 'api_request') return
+  const sessionId = String(
+    kvAttr(attrs, 'session.id')
+    ?? kvAttr(resourceAttrs, 'session.id')
+    ?? ''
+  )
+  const promptId = String(kvAttr(attrs, 'prompt.id') ?? '')
+  const toolName = String(kvAttr(attrs, 'tool_name') ?? '')
 
-  const sessionId = String(kvAttr(attrs, 'session.id') ?? kvAttr(resourceAttrs, 'session.id') ?? '')
+  if (eventName === 'tool_decision' || eventName === 'tool_result') {
+    if (promptId && toolName) toolNameByPromptId.set(promptId, toolName)
+    return
+  }
+
+  if (eventName !== 'api_request') return
   if (!sessionId) return
 
   const inputTokens = Number(kvAttr(attrs, 'input_tokens') ?? 0)
   const outputTokens = Number(kvAttr(attrs, 'output_tokens') ?? 0)
   const cacheReadTokens = Number(kvAttr(attrs, 'cache_read_tokens') ?? 0)
   const cacheCreationTokens = Number(kvAttr(attrs, 'cache_creation_tokens') ?? 0)
-  const promptId = String(kvAttr(attrs, 'prompt.id') ?? '')
   const model = String(kvAttr(attrs, 'model') ?? '')
+  const resolvedToolName = toolName || (
+    promptId
+      ? toolNameByPromptId.get(promptId) ?? ''
+      : ''
+  )
+
+  if (promptId && resolvedToolName) {
+    toolNameByPromptId.set(promptId, resolvedToolName)
+  }
 
   const createdAt = nanosToDate(record.timeUnixNano)
 
@@ -197,6 +219,7 @@ async function processLogRecord(record: LogRecord, resourceAttrs?: KeyValue[]): 
   await db.insert(prompts).values({
     sessionId,
     promptId,
+    toolName: resolvedToolName,
     promptTokens: inputTokens,
     requestTokens: inputTokens,
     responseTokens: outputTokens,
@@ -245,7 +268,7 @@ function nanosToDate(nanos: string): Date {
 // Span processing
 // ---------------------------------------------------------------------------
 
-async function processSpan(span: Span, resourceAttrs?: KeyValue[]): Promise<void> {
+async function processSpan(span: Span, _resourceAttrs?: KeyValue[]): Promise<void> {
   const spanName = span.name
 
   // ------------------------------------------------------------------
@@ -277,26 +300,26 @@ async function processSpan(span: Span, resourceAttrs?: KeyValue[]): Promise<void
   // ------------------------------------------------------------------
   // Per-prompt / LLM call spans
   // ------------------------------------------------------------------
-  const inputTokens =
-    Number(attr(span, 'gen_ai.usage.input_tokens') ?? attr(span, 'llm.usage.prompt_tokens') ?? 0)
-  const outputTokens =
-    Number(attr(span, 'gen_ai.usage.output_tokens') ?? attr(span, 'llm.usage.completion_tokens') ?? 0)
+  const inputTokens
+    = Number(attr(span, 'gen_ai.usage.input_tokens') ?? attr(span, 'llm.usage.prompt_tokens') ?? 0)
+  const outputTokens
+    = Number(attr(span, 'gen_ai.usage.output_tokens') ?? attr(span, 'llm.usage.completion_tokens') ?? 0)
 
   if (inputTokens === 0 && outputTokens === 0) return
 
   const sessionId = String(
-    attr(span, 'session.id') ??
-    attr(span, 'claude.session_id') ??
-    attr(span, 'gen_ai.claude.session_id') ??
-    ''
+    attr(span, 'session.id')
+    ?? attr(span, 'claude.session_id')
+    ?? attr(span, 'gen_ai.claude.session_id')
+    ?? ''
   )
   if (!sessionId) return
 
   const promptText = String(
-    attr(span, 'gen_ai.prompt') ??
-    attr(span, 'llm.prompts') ??
-    attr(span, 'input.value') ??
-    ''
+    attr(span, 'gen_ai.prompt')
+    ?? attr(span, 'llm.prompts')
+    ?? attr(span, 'input.value')
+    ?? ''
   )
 
   const createdAt = nanosToDate(span.startTimeUnixNano)
@@ -345,16 +368,16 @@ const DEBUG = process.env.DEBUG_OTEL_COLLECTOR === '1' || process.env.DEBUG === 
 
 const ExportTraceServiceRequest = getExportRequestProto(ServiceClientType.SPANS)
 
-function extractSpans(body: OtlpTracesPayload): Array<{ span: Span; resourceAttrs?: KeyValue[] }> {
+function extractSpans(body: OtlpTracesPayload): Array<{ span: Span, resourceAttrs?: KeyValue[] }> {
   const resourceSpans = body.resourceSpans ?? []
-  const result: Array<{ span: Span; resourceAttrs?: KeyValue[] }> = []
+  const result: Array<{ span: Span, resourceAttrs?: KeyValue[] }> = []
 
-  for (const rs of resourceSpans as any[]) {
-    const resourceAttrs = rs.resource?.attributes as KeyValue[] | undefined
+  for (const rs of resourceSpans) {
+    const resourceAttrs = rs.resource?.attributes
     const scopeSpans = rs.scopeSpans ?? rs.instrumentationLibrarySpans ?? []
-    for (const ss of scopeSpans as any[]) {
-      for (const span of (ss.spans ?? []) as any[]) {
-        result.push({ span: span as Span, resourceAttrs })
+    for (const ss of scopeSpans) {
+      for (const span of ss.spans ?? []) {
+        result.push({ span, resourceAttrs })
       }
     }
   }
@@ -365,7 +388,7 @@ function extractSpans(body: OtlpTracesPayload): Array<{ span: Span; resourceAttr
 function parseOtlpTracesFromBuffer(
   buf: ArrayBuffer,
   contentType: string
-): { ok: true; body: OtlpTracesPayload } | { ok: false; error: string } {
+): { ok: true, body: OtlpTracesPayload } | { ok: false, error: string } {
   const u8 = new Uint8Array(buf)
 
   if (contentType.includes('json')) {
@@ -440,7 +463,7 @@ const server = Bun.serve({
       const text = await req.text()
       try {
         const payload = JSON.parse(text) as OtlpLogsPayload
-        const records: Array<{ record: LogRecord; resourceAttrs?: KeyValue[] }> = []
+        const records: Array<{ record: LogRecord, resourceAttrs?: KeyValue[] }> = []
         for (const rl of payload.resourceLogs ?? []) {
           for (const sl of rl.scopeLogs ?? []) {
             for (const record of sl.logRecords ?? []) {

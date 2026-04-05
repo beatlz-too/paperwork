@@ -19,6 +19,7 @@ export const prompts = pgTable('prompts', {
   id: uuid('id').primaryKey().defaultRandom(),
   sessionId: text('session_id').notNull().references(() => sessions.sessionId),
   promptId: text('prompt_id').notNull().default(''),
+  toolName: text('tool_name').notNull().default(''),
   promptTokens: integer('prompt_tokens').notNull().default(0),
   requestTokens: integer('request_tokens').notNull().default(0),
   responseTokens: integer('response_tokens').notNull().default(0),
