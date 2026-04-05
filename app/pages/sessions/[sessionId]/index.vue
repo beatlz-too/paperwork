@@ -1,12 +1,14 @@
 <script lang="ts" setup>
 import type { TableColumn } from '@nuxt/ui'
 import type { AggregatedPrompt, BreakdownChartResponse, Session, UsageChartResponse } from '#shared/types'
+import { sortableHeader } from '~/utils/table'
 
 const route = useRoute()
 const router = useRouter()
 const sessionId = route.params.sessionId as string
 
 const { data: sessions, refresh: refreshSessions } = await useFetch<Session[]>('/api/sessions')
+const { data: projectNames, refresh: refreshProjectNames } = await useFetch<string[]>('/api/fetchProjects')
 const session = computed(() => sessions.value?.find(s => s.sessionId === sessionId))
 
 useSeoMeta({
@@ -16,6 +18,15 @@ useSeoMeta({
 const { data: prompts, status } = await useFetch<AggregatedPrompt[]>(
   `/api/sessions/${sessionId}/prompts`
 )
+type PromptRow = AggregatedPrompt & { promptNumber: number }
+
+const promptRows = computed<PromptRow[]>(() =>
+  (prompts.value ?? []).map((prompt, index) => ({
+    ...prompt,
+    promptNumber: index + 1
+  }))
+)
+
 const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
   query: { page: 'session', sessionId }
 })
@@ -23,22 +34,61 @@ const { data: breakdownData, status: breakdownStatus } = await useFetch<Breakdow
   query: { page: 'session', kind: 'breakdown', sessionId }
 })
 
-const columns: TableColumn<AggregatedPrompt>[] = [
-  { accessorKey: 'promptId', header: 'Prompt ID' },
-  { accessorKey: 'apiCalls', header: 'API Calls' },
-  { accessorKey: 'promptTokens', header: 'Input' },
-  { accessorKey: 'responseTokens', header: 'Output' },
-  { accessorKey: 'cacheReadTokens', header: 'Cache Read' },
-  { accessorKey: 'cacheCreationTokens', header: 'Cache Write' }
+const columns: TableColumn<PromptRow>[] = [
+  { accessorKey: 'promptNumber', header: sortableHeader<PromptRow>('Prompt #') },
+  { accessorKey: 'promptId', header: sortableHeader<PromptRow>('Prompt ID') },
+  { accessorKey: 'apiCalls', header: sortableHeader<PromptRow>('API Calls') },
+  { accessorKey: 'promptTokens', header: sortableHeader<PromptRow>('Input') },
+  { accessorKey: 'responseTokens', header: sortableHeader<PromptRow>('Output') },
+  { accessorKey: 'cacheReadTokens', header: sortableHeader<PromptRow>('Cache Read') },
+  { accessorKey: 'cacheCreationTokens', header: sortableHeader<PromptRow>('Cache Write') }
 ]
+
+const sorting = ref([{ id: 'promptNumber', desc: false }])
 
 function formatTokens(n: number | null): string {
   if (n == null) return '—'
   return n.toLocaleString()
 }
 
-function onSelect(_e: Event, row: { original: AggregatedPrompt }) {
+function onSelect(_e: Event, row: { original: PromptRow }) {
   router.push(`/sessions/${sessionId}/prompts/${row.original.promptId}`)
+}
+
+const editingProject = ref(false)
+const editedProject = ref('')
+
+function startProjectEditing() {
+  editedProject.value = session.value?.projectName ?? ''
+  editingProject.value = true
+}
+
+function cancelProjectEditing() {
+  editedProject.value = session.value?.projectName ?? ''
+  editingProject.value = false
+}
+
+async function saveProject() {
+  if (!editingProject.value) return
+
+  const nextProjectName = editedProject.value.trim()
+  const currentProjectName = session.value?.projectName ?? ''
+
+  editingProject.value = false
+
+  if (nextProjectName === currentProjectName) return
+
+  await $fetch(`/api/sessions/${sessionId}/project`, {
+    method: 'PATCH',
+    body: { projectName: nextProjectName }
+  })
+  await Promise.all([refreshSessions(), refreshProjectNames()])
+}
+
+function onProjectMenuOpenChange(isOpen: boolean) {
+  if (!isOpen) {
+    void saveProject()
+  }
 }
 
 // Inline session name editing
@@ -97,10 +147,31 @@ function onNameKeydown(e: KeyboardEvent) {
         </h1>
         <div class="mt-1 flex items-center gap-2">
           <UuidDisplay :uuid="sessionId" />
-          <span
-            v-if="session?.projectName"
-            class="text-sm text-muted"
-          >· {{ session.projectName }}</span>
+          <button
+            v-if="!editingProject"
+            type="button"
+            class="inline-flex cursor-pointer items-center gap-1 text-sm text-muted transition-colors hover:text-default"
+            @click="startProjectEditing"
+          >
+            <span>{{ session?.projectName || 'Add project' }}</span>
+            <UIcon
+              name="i-lucide-pencil"
+              class="text-xs"
+            />
+          </button>
+          <UInputMenu
+            v-else
+            v-model="editedProject"
+            :items="projectNames ?? []"
+            autocomplete
+            open-on-focus
+            autofocus
+            placeholder="Select or type a project"
+            class="w-72"
+            @update:open="onProjectMenuOpenChange"
+            @keydown.enter.prevent="saveProject"
+            @keydown.esc.prevent="cancelProjectEditing"
+          />
         </div>
       </div>
     </div>
@@ -206,12 +277,17 @@ function onNameKeydown(e: KeyboardEvent) {
     </div>
 
     <UTable
-      :data="prompts ?? []"
+      :data="promptRows"
       :columns="columns"
       :loading="status === 'pending'"
       class="cursor-pointer"
+      v-model:sorting="sorting"
       :on-select="onSelect"
     >
+      <template #promptNumber-cell="{ row }">
+        {{ row.original.promptNumber }}
+      </template>
+
       <template #promptId-cell="{ row }">
         <UuidDisplay :uuid="row.original.promptId" />
       </template>

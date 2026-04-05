@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { BreakdownChartResponse, ProjectSummary, Session, UsageChartDimension, UsageChartResponse } from '#shared/types'
+import { sortableHeader } from '~/utils/table'
 
 useSeoMeta({ title: 'Sessions – Paperwork' })
 
@@ -45,9 +46,6 @@ const projectData = computed<ProjectSummary[]>(() => {
   )
 })
 
-const tableData = computed<Session[] | ProjectSummary[]>(() =>
-  dimension.value === 'project' ? projectData.value : (sessions.value ?? [])
-)
 const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
   query: { page: 'main', dimension }
 })
@@ -56,29 +54,30 @@ const { data: breakdownData, status: breakdownStatus } = await useFetch<Breakdow
 })
 
 const sessionColumns: TableColumn<Session>[] = [
-  { accessorKey: 'projectName', header: 'Project' },
-  { accessorKey: 'name', header: 'Session Name' },
-  { accessorKey: 'sessionId', header: 'Session ID' },
-  { accessorKey: 'requestTokensTotal', header: 'Input Tokens' },
-  { accessorKey: 'responseTokensTotal', header: 'Output Tokens' },
-  { accessorKey: 'cacheReadTokensTotal', header: 'Cache Read' },
-  { accessorKey: 'cacheCreationTokensTotal', header: 'Cache Write' },
-  { accessorKey: 'createdAt', header: 'Created (UTC)' },
-  { accessorKey: 'lastUsedAt', header: 'Last Used (UTC)' }
+  { accessorKey: 'projectName', header: sortableHeader<Session>('Project') },
+  { accessorKey: 'name', header: sortableHeader<Session>('Session Name') },
+  { accessorKey: 'sessionId', header: sortableHeader<Session>('Session ID') },
+  { accessorKey: 'requestTokensTotal', header: sortableHeader<Session>('Input Tokens') },
+  { accessorKey: 'responseTokensTotal', header: sortableHeader<Session>('Output Tokens') },
+  { accessorKey: 'cacheReadTokensTotal', header: sortableHeader<Session>('Cache Read') },
+  { accessorKey: 'cacheCreationTokensTotal', header: sortableHeader<Session>('Cache Write') },
+  { accessorKey: 'createdAt', header: sortableHeader<Session>('Created (UTC)') },
+  { accessorKey: 'lastUsedAt', header: sortableHeader<Session>('Last Used (UTC)') }
 ]
 
 const projectColumns: TableColumn<ProjectSummary>[] = [
-  { accessorKey: 'projectName', header: 'Project' },
-  { accessorKey: 'sessionCount', header: 'Sessions' },
-  { accessorKey: 'requestTokensTotal', header: 'Input Tokens' },
-  { accessorKey: 'responseTokensTotal', header: 'Output Tokens' },
-  { accessorKey: 'cacheReadTokensTotal', header: 'Cache Read' },
-  { accessorKey: 'cacheCreationTokensTotal', header: 'Cache Write' },
-  { accessorKey: 'createdAt', header: 'Created (UTC)' },
-  { accessorKey: 'lastUsedAt', header: 'Last Used (UTC)' }
+  { accessorKey: 'projectName', header: sortableHeader<ProjectSummary>('Project') },
+  { accessorKey: 'sessionCount', header: sortableHeader<ProjectSummary>('Sessions') },
+  { accessorKey: 'requestTokensTotal', header: sortableHeader<ProjectSummary>('Input Tokens') },
+  { accessorKey: 'responseTokensTotal', header: sortableHeader<ProjectSummary>('Output Tokens') },
+  { accessorKey: 'cacheReadTokensTotal', header: sortableHeader<ProjectSummary>('Cache Read') },
+  { accessorKey: 'cacheCreationTokensTotal', header: sortableHeader<ProjectSummary>('Cache Write') },
+  { accessorKey: 'createdAt', header: sortableHeader<ProjectSummary>('Created (UTC)') },
+  { accessorKey: 'lastUsedAt', header: sortableHeader<ProjectSummary>('Last Used (UTC)') }
 ]
 
-const columns = computed(() => dimension.value === 'project' ? projectColumns : sessionColumns)
+const sessionSorting = ref([{ id: 'lastUsedAt', desc: true }])
+const projectSorting = ref([{ id: 'lastUsedAt', desc: true }])
 
 function formatDate(value: string | null): string {
   if (!value) return '—'
@@ -97,7 +96,7 @@ function onSelect(_e: Event, row: TableRow<Session>) {
 }
 
 function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
-  router.push(`/projects/${encodeURIComponent((row.original as ProjectSummary).projectName)}`)
+  router.push(`/projects/${encodeURIComponent(row.original.projectName)}`)
 }
 </script>
 
@@ -113,17 +112,19 @@ function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
     </div>
 
     <div class="mb-4 flex items-center gap-2">
-      <span class="text-sm text-muted">View by</span>
       <UButtonGroup size="sm">
         <UButton
           :variant="dimension === 'session' ? 'solid' : 'outline'"
+          :ui="{ base: 'cursor-pointer' }"
           @click="dimension = 'session'"
         >
           Sessions
         </UButton>
         <UButton
           :variant="dimension === 'project' ? 'solid' : 'outline'"
+          :ui="{ base: 'cursor-pointer' }"
           @click="dimension = 'project'"
+          class="ml-2"
         >
           Projects
         </UButton>
@@ -177,26 +178,24 @@ function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
     </div>
 
     <UTable
-      :data="tableData"
-      :columns="columns"
+      v-if="dimension === 'session'"
+      :data="sessions ?? []"
+      :columns="sessionColumns"
       :loading="status === 'pending'"
       class="cursor-pointer"
-      :on-select="dimension === 'session' ? onSelect : onProjectSelect"
+      v-model:sorting="sessionSorting"
+      :on-select="onSelect"
     >
       <template #projectName-cell="{ row }">
         <span class="text-sm">{{ row.original.projectName || '—' }}</span>
       </template>
 
       <template #name-cell="{ row }">
-        <span class="font-medium">{{ (row.original as Session).name || '(unnamed)' }}</span>
+        <span class="font-medium">{{ row.original.name || '(unnamed)' }}</span>
       </template>
 
       <template #sessionId-cell="{ row }">
-        <UuidDisplay :uuid="(row.original as Session).sessionId" />
-      </template>
-
-      <template #sessionCount-cell="{ row }">
-        {{ (row.original as ProjectSummary).sessionCount.toLocaleString() }}
+        <UuidDisplay :uuid="row.original.sessionId" />
       </template>
 
       <template #requestTokensTotal-cell="{ row }">
@@ -230,6 +229,58 @@ function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
             class="text-4xl"
           />
           <p>No sessions yet. Start Claude Code with OTel enabled.</p>
+        </div>
+      </template>
+    </UTable>
+
+    <UTable
+      v-else
+      :data="projectData"
+      :columns="projectColumns"
+      :loading="status === 'pending'"
+      class="cursor-pointer"
+      v-model:sorting="projectSorting"
+      :on-select="onProjectSelect"
+    >
+      <template #projectName-cell="{ row }">
+        <span class="text-sm">{{ row.original.projectName }}</span>
+      </template>
+
+      <template #sessionCount-cell="{ row }">
+        {{ row.original.sessionCount.toLocaleString() }}
+      </template>
+
+      <template #requestTokensTotal-cell="{ row }">
+        {{ formatTokens(row.original.requestTokensTotal) }}
+      </template>
+
+      <template #responseTokensTotal-cell="{ row }">
+        {{ formatTokens(row.original.responseTokensTotal) }}
+      </template>
+
+      <template #cacheReadTokensTotal-cell="{ row }">
+        {{ formatTokens(row.original.cacheReadTokensTotal) }}
+      </template>
+
+      <template #cacheCreationTokensTotal-cell="{ row }">
+        {{ formatTokens(row.original.cacheCreationTokensTotal) }}
+      </template>
+
+      <template #createdAt-cell="{ row }">
+        <span class="text-sm text-muted">{{ formatDate(row.original.createdAt) }}</span>
+      </template>
+
+      <template #lastUsedAt-cell="{ row }">
+        <span class="text-sm text-muted">{{ formatDate(row.original.lastUsedAt) }}</span>
+      </template>
+
+      <template #empty>
+        <div class="flex flex-col items-center gap-2 py-12 text-muted">
+          <UIcon
+            name="i-lucide-inbox"
+            class="text-4xl"
+          />
+          <p>No projects yet. Sessions will appear here once grouped.</p>
         </div>
       </template>
     </UTable>

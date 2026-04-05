@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 export const sessions = pgTable('sessions', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -11,7 +11,9 @@ export const sessions = pgTable('sessions', {
   cacheCreationTokensTotal: integer('cache_creation_tokens_total').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow()
-})
+}, table => ({
+  projectNameIdx: index('sessions_project_name_idx').on(table.projectName)
+}))
 
 export const prompts = pgTable('prompts', {
   id: uuid('id').primaryKey().defaultRandom(),

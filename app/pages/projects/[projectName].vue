@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { BreakdownChartResponse, Session, UsageChartResponse } from '#shared/types'
+import { sortableHeader } from '~/utils/table'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,15 +32,17 @@ const totals = computed(() => {
 })
 
 const columns: TableColumn<Session>[] = [
-  { accessorKey: 'name', header: 'Session Name' },
-  { accessorKey: 'sessionId', header: 'Session ID' },
-  { accessorKey: 'requestTokensTotal', header: 'Input Tokens' },
-  { accessorKey: 'responseTokensTotal', header: 'Output Tokens' },
-  { accessorKey: 'cacheReadTokensTotal', header: 'Cache Read' },
-  { accessorKey: 'cacheCreationTokensTotal', header: 'Cache Write' },
-  { accessorKey: 'createdAt', header: 'Created (UTC)' },
-  { accessorKey: 'lastUsedAt', header: 'Last Used (UTC)' }
+  { accessorKey: 'name', header: sortableHeader<Session>('Session Name') },
+  { accessorKey: 'sessionId', header: sortableHeader<Session>('Session ID') },
+  { accessorKey: 'requestTokensTotal', header: sortableHeader<Session>('Input Tokens') },
+  { accessorKey: 'responseTokensTotal', header: sortableHeader<Session>('Output Tokens') },
+  { accessorKey: 'cacheReadTokensTotal', header: sortableHeader<Session>('Cache Read') },
+  { accessorKey: 'cacheCreationTokensTotal', header: sortableHeader<Session>('Cache Write') },
+  { accessorKey: 'createdAt', header: sortableHeader<Session>('Created (UTC)') },
+  { accessorKey: 'lastUsedAt', header: sortableHeader<Session>('Last Used (UTC)') }
 ]
+
+const sorting = ref([{ id: 'lastUsedAt', desc: true }])
 
 function formatDate(value: string | null): string {
   if (!value) return '—'
@@ -182,6 +185,7 @@ function onSelect(_e: Event, row: TableRow<Session>) {
       :columns="columns"
       :loading="status === 'pending'"
       class="cursor-pointer"
+      v-model:sorting="sorting"
       :on-select="onSelect"
     >
       <template #name-cell="{ row }">

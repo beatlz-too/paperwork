@@ -33,7 +33,7 @@ useSeoMeta({
       </template>
 
       <template #right>
-        <UColorModeButton />
+        <UColorModeButton :ui="{ base: 'cursor-pointer' }" />
       </template>
     </UHeader>
 
