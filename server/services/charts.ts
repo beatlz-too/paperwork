@@ -184,7 +184,7 @@ async function loadSessionRows(sessionId: string): Promise<ChartRow[]> {
   }
 
   return [...aggregated.values()].map((row, index) => ({
-    label: `Prompt#${index + 1}`,
+    label: `Prompt #${index + 1}`,
     at: row.createdAt,
     weightedTokens: weightTokens({
       prompt: row.promptTokens,
@@ -204,7 +204,7 @@ async function loadPromptRows(sessionId: string, promptId: string): Promise<Char
     .orderBy(asc(prompts.createdAt))
 
   return rows.map((row, index) => ({
-    label: `ApiCall#${index + 1}`,
+    label: `API Call #${index + 1}`,
     at: row.createdAt,
     weightedTokens: weightTokens({
       prompt: row.promptTokens,

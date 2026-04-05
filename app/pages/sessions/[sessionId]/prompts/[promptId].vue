@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { TableColumn } from '@nuxt/ui'
 import type { AggregatedPrompt, BreakdownChartResponse, Prompt, UsageChartResponse } from '#shared/types'
+import { sortableHeader } from '~/utils/table'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,6 +25,15 @@ const next = computed(() => currentIndex.value >= 0 && currentIndex.value < (all
 const { data: apiCalls, status } = await useFetch<Prompt[]>(
   () => `/api/sessions/${sessionId}/prompts/${promptId.value}`
 )
+type ApiCallRow = Prompt & { callNumber: number }
+
+const apiCallRows = computed<ApiCallRow[]>(() =>
+  (apiCalls.value ?? []).map((row, index) => ({
+    ...row,
+    callNumber: index + 1
+  }))
+)
+
 const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
   query: computed(() => ({
     page: 'prompt' as const,
@@ -42,13 +52,16 @@ const { data: breakdownData, status: breakdownStatus } = await useFetch<Breakdow
 
 useSeoMeta({ title: computed(() => `Prompt ${promptId.value.slice(0, 8)}… – Paperwork`) })
 
-const columns: TableColumn<Prompt>[] = [
-  { accessorKey: 'createdAt', header: 'Time' },
-  { accessorKey: 'promptTokens', header: 'Input' },
-  { accessorKey: 'responseTokens', header: 'Output' },
-  { accessorKey: 'cacheReadTokens', header: 'Cache Read' },
-  { accessorKey: 'cacheCreationTokens', header: 'Cache Write' }
+const columns: TableColumn<ApiCallRow>[] = [
+  { accessorKey: 'callNumber', header: sortableHeader<ApiCallRow>('Call #') },
+  { accessorKey: 'createdAt', header: sortableHeader<ApiCallRow>('Time') },
+  { accessorKey: 'promptTokens', header: sortableHeader<ApiCallRow>('Input') },
+  { accessorKey: 'responseTokens', header: sortableHeader<ApiCallRow>('Output') },
+  { accessorKey: 'cacheReadTokens', header: sortableHeader<ApiCallRow>('Cache Read') },
+  { accessorKey: 'cacheCreationTokens', header: sortableHeader<ApiCallRow>('Cache Write') }
 ]
+
+const sorting = ref([{ id: 'callNumber', desc: false }])
 
 function formatTokens(n: number | null): string {
   if (n == null) return '—'
@@ -209,14 +222,19 @@ function navigate(p: AggregatedPrompt) {
     </div>
 
     <!-- Per-API-call breakdown -->
-    <h2 class="text-lg font-semibold mb-3">
+  <h2 class="text-lg font-semibold mb-3">
       API Call Breakdown
     </h2>
     <UTable
-      :data="apiCalls ?? []"
+      :data="apiCallRows"
       :columns="columns"
       :loading="status === 'pending'"
+      v-model:sorting="sorting"
     >
+      <template #callNumber-cell="{ row }">
+        {{ row.original.callNumber }}
+      </template>
+
       <template #createdAt-cell="{ row }">
         <span class="text-sm text-muted">{{ formatTime(row.original.createdAt) }}</span>
       </template>
