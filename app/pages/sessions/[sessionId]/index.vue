@@ -239,7 +239,7 @@ function onNameKeydown(e: KeyboardEvent) {
               Prompt Usage Over Time
             </h2>
             <p class="text-sm text-muted">
-              Stacked bars by prompt with weighted token totals.
+              Stacked bars by prompt with input-equivalent weighted token totals.
             </p>
           </div>
         </template>
@@ -261,7 +261,7 @@ function onNameKeydown(e: KeyboardEvent) {
               Token Type Breakdown
             </h2>
             <p class="text-sm text-muted">
-              Total weighted expenditure per token type for this session.
+              Total input-equivalent weighted expenditure per token type for this session.
             </p>
           </div>
         </template>

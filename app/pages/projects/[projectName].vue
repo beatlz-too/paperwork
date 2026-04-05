@@ -142,7 +142,7 @@ function onSelect(_e: Event, row: TableRow<Session>) {
               Session Usage Over Time
             </h2>
             <p class="text-sm text-muted">
-              Stacked bars by session with weighted token totals.
+              Stacked bars by session with input-equivalent weighted token totals.
             </p>
           </div>
         </template>
@@ -164,7 +164,7 @@ function onSelect(_e: Event, row: TableRow<Session>) {
               Token Type Breakdown
             </h2>
             <p class="text-sm text-muted">
-              Total weighted expenditure per token type for this project.
+              Total input-equivalent weighted expenditure per token type for this project.
             </p>
           </div>
         </template>

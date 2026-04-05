@@ -139,7 +139,7 @@ function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
               Usage Over Time
             </h2>
             <p class="text-sm text-muted">
-              Stacked bars by session with weighted token totals.
+              Stacked bars by session with input-equivalent weighted token totals.
             </p>
           </div>
         </template>
@@ -161,7 +161,7 @@ function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
               Token Type Breakdown
             </h2>
             <p class="text-sm text-muted">
-              Total weighted expenditure per token type across all sessions.
+              Total input-equivalent weighted expenditure per token type across all sessions.
             </p>
           </div>
         </template>

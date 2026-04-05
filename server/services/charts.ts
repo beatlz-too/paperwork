@@ -21,7 +21,9 @@ const TOKEN_WEIGHTS: UsageChartWeights = {
   prompt: 1,
   response: 5,
   cacheRead: 0.1,
-  cacheCreation: 0.5
+  // Claude's published prompt-caching baseline is 5-minute cache writes at 1.25x input.
+  // The telemetry we store does not distinguish 5-minute vs 1-hour cache writes.
+  cacheCreation: 1.25
 }
 
 const PALETTE = [
@@ -276,7 +278,7 @@ export async function getBreakdownChartData(params: {
     page: params.page,
     labels: BREAKDOWN_LABELS,
     datasets: [{
-      label: 'Weighted Tokens',
+      label: 'Input-equivalent weighted tokens',
       data,
       borderColor: BREAKDOWN_COLORS,
       backgroundColor: BREAKDOWN_COLORS.map(c => rgba(c, 0.18)),

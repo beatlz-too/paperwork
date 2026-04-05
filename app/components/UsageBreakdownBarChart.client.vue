@@ -21,14 +21,14 @@ const options = computed<ChartOptions<'bar'>>(() => ({
     legend: {
       display: false
     },
-    tooltip: {
-      callbacks: {
-        label(context) {
-          const value = Number(context.parsed.y ?? 0)
-          return `${context.label}: ${value.toLocaleString()}`
+      tooltip: {
+        callbacks: {
+          label(context) {
+            const value = Number(context.parsed.y ?? 0)
+            return `${context.label}: ${value.toLocaleString()} input-equivalent weighted tokens`
+          }
         }
       }
-    }
   },
   scales: {
     x: {

@@ -194,7 +194,7 @@ function navigate(p: AggregatedPrompt) {
               API Call Usage Over Time
             </h2>
             <p class="text-sm text-muted">
-              Stacked bars by table row with backend-weighted token totals.
+              Stacked bars by table row with input-equivalent weighted token totals.
             </p>
           </div>
         </template>
@@ -216,7 +216,7 @@ function navigate(p: AggregatedPrompt) {
               Token Type Breakdown
             </h2>
             <p class="text-sm text-muted">
-              Total weighted expenditure per token type for this prompt.
+              Total input-equivalent weighted expenditure per token type for this prompt.
             </p>
           </div>
         </template>
