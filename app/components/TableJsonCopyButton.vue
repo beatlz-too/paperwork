@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { buildTableJsonPayload, type TableJsonColumn } from '#shared/utils/table-json'
+import { getTablePayload, type TableJsonColumn } from '#shared/utils/getTablePayload'
 import type { TableJsonTableName } from '#shared/types/tables.interface'
 
 const props = defineProps<{
@@ -11,7 +11,7 @@ const props = defineProps<{
 const toast = useToast()
 
 async function copyTableJson() {
-  const payload = buildTableJsonPayload(
+  const payload = getTablePayload(
     props.tableName,
     props.rows,
     props.columns as readonly TableJsonColumn[]
