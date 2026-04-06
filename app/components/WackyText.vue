@@ -42,9 +42,8 @@ const props = withDefaults(
   },
 )
 
-const activeColors = computed(() =>
-  props.magic ? [...props.colors].reverse() : props.colors,
-)
+const theme = computed(() => useColorMode().value)
+const activeColors = computed(() => theme.value === "light" ? [...props.colors].reverse() : props.colors)
 
 const slots = useSlots()
 const innerText = ref('')

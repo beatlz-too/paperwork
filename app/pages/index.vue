@@ -81,6 +81,12 @@ const projectColumns: TableColumn<ProjectSummary>[] = [
 
 const sessionSorting = ref([{ id: 'lastUsedAt', desc: true }])
 const projectSorting = ref([{ id: 'lastUsedAt', desc: true }])
+const groupByProjects = computed({
+  get: () => dimension.value === 'project',
+  set: (value: boolean) => {
+    dimension.value = value ? 'project' : 'session'
+  }
+})
 
 function formatDate(value: string | null): string {
   if (!value) return '—'
@@ -114,24 +120,19 @@ function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
       </p>
     </div>
 
-    <div class="mb-4 flex items-center gap-2">
-      <UButtonGroup size="sm">
-        <UButton
-          :variant="dimension === 'session' ? 'solid' : 'outline'"
-          :ui="{ base: 'cursor-pointer' }"
-          @click="dimension = 'session'"
-        >
-          Sessions
-        </UButton>
-        <UButton
-          :variant="dimension === 'project' ? 'solid' : 'outline'"
-          :ui="{ base: 'cursor-pointer' }"
-          @click="dimension = 'project'"
-          class="ml-2"
-        >
-          Projects
-        </UButton>
-      </UButtonGroup>
+    <div class="mb-4 flex items-center gap-3 text-sm">
+      <span class="text-muted font-medium">
+        Group by:
+      </span>
+      <div class="flex items-center gap-2">
+        <span :class="groupByProjects ? 'text-muted' : 'font-medium text-default'">
+          sessions
+        </span>
+        <USwitch v-model="groupByProjects" />
+        <span :class="groupByProjects ? 'font-medium text-default' : 'text-muted'">
+          projects
+        </span>
+      </div>
     </div>
 
     <div class="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
