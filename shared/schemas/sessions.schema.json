@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "paperwork.sessions.table.json",
+  "title": "Sessions table JSON",
+  "description": "JSON Schema for the copied sessions table payload.",
+  "type": "object",
+  "properties": {
+    "sessions": {
+      "type": "object",
+      "description": "Copied sessions table payload.",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "description": "Ordered rows copied from the sessions table.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "projectName": {
+                "description": "Project name shown in the table.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "description": "Session name shown in the table.",
+                "type": "string"
+              },
+              "sessionId": {
+                "description": "Stable session identifier displayed in the table.",
+                "type": "string"
+              },
+              "requestTokensTotal": {
+                "description": "Total input tokens for the session.",
+                "type": "number"
+              },
+              "responseTokensTotal": {
+                "description": "Total output tokens for the session.",
+                "type": "number"
+              },
+              "cacheReadTokensTotal": {
+                "description": "Total cache-read tokens for the session.",
+                "type": "number"
+              },
+              "cacheCreationTokensTotal": {
+                "description": "Total cache-write tokens for the session.",
+                "type": "number"
+              },
+              "createdAt": {
+                "description": "Session creation timestamp.",
+                "type": "string"
+              },
+              "lastUsedAt": {
+                "description": "Most recent activity timestamp for the session.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "projectName",
+              "name",
+              "sessionId",
+              "requestTokensTotal",
+              "responseTokensTotal",
+              "cacheReadTokensTotal",
+              "cacheCreationTokensTotal",
+              "createdAt",
+              "lastUsedAt"
+            ]
+          }
+        }
+      },
+      "required": [
+        "rows"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "sessions"
+  ],
+  "additionalProperties": false
+}

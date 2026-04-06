@@ -203,112 +203,130 @@ function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
       </UCard>
     </div>
 
-    <UTable
-      v-if="dimension === 'session'"
-      :data="sessions ?? []"
-      :columns="sessionColumns"
-      :loading="status === 'pending'"
-      class="cursor-pointer"
-      v-model:sorting="sessionSorting"
-      :on-select="onSelect"
-    >
-      <template #projectName-cell="{ row }">
-        <span class="text-sm">{{ row.original.projectName || '—' }}</span>
-      </template>
+    <div v-if="dimension === 'session'">
+      <div class="mb-3 flex items-center justify-end">
+        <TableJsonCopyButton
+          table-name="sessions"
+          :rows="sessions ?? []"
+          :columns="sessionColumns"
+        />
+      </div>
 
-      <template #name-cell="{ row }">
-        <span class="font-medium">{{ row.original.name || '(unnamed)' }}</span>
-      </template>
+      <UTable
+        :data="sessions ?? []"
+        :columns="sessionColumns"
+        :loading="status === 'pending'"
+        class="cursor-pointer"
+        v-model:sorting="sessionSorting"
+        :on-select="onSelect"
+      >
+        <template #projectName-cell="{ row }">
+          <span class="text-sm">{{ row.original.projectName || '—' }}</span>
+        </template>
 
-      <template #sessionId-cell="{ row }">
-        <UuidDisplay :uuid="row.original.sessionId" />
-      </template>
+        <template #name-cell="{ row }">
+          <span class="font-medium">{{ row.original.name || '(unnamed)' }}</span>
+        </template>
 
-      <template #requestTokensTotal-cell="{ row }">
-        {{ formatTokens(row.original.requestTokensTotal) }}
-      </template>
+        <template #sessionId-cell="{ row }">
+          <UuidDisplay :uuid="row.original.sessionId" />
+        </template>
 
-      <template #responseTokensTotal-cell="{ row }">
-        {{ formatTokens(row.original.responseTokensTotal) }}
-      </template>
+        <template #requestTokensTotal-cell="{ row }">
+          {{ formatTokens(row.original.requestTokensTotal) }}
+        </template>
 
-      <template #cacheReadTokensTotal-cell="{ row }">
-        {{ formatTokens(row.original.cacheReadTokensTotal) }}
-      </template>
+        <template #responseTokensTotal-cell="{ row }">
+          {{ formatTokens(row.original.responseTokensTotal) }}
+        </template>
 
-      <template #cacheCreationTokensTotal-cell="{ row }">
-        {{ formatTokens(row.original.cacheCreationTokensTotal) }}
-      </template>
+        <template #cacheReadTokensTotal-cell="{ row }">
+          {{ formatTokens(row.original.cacheReadTokensTotal) }}
+        </template>
 
-      <template #createdAt-cell="{ row }">
-        <span class="text-sm text-muted">{{ formatDate(row.original.createdAt) }}</span>
-      </template>
+        <template #cacheCreationTokensTotal-cell="{ row }">
+          {{ formatTokens(row.original.cacheCreationTokensTotal) }}
+        </template>
 
-      <template #lastUsedAt-cell="{ row }">
-        <span class="text-sm text-muted">{{ formatDate(row.original.lastUsedAt) }}</span>
-      </template>
+        <template #createdAt-cell="{ row }">
+          <span class="text-sm text-muted">{{ formatDate(row.original.createdAt) }}</span>
+        </template>
 
-      <template #empty>
-        <div class="flex flex-col items-center gap-2 py-12 text-muted">
-          <UIcon
-            name="i-lucide-inbox"
-            class="text-4xl"
-          />
-          <p>No sessions yet. Start Claude Code with OTel enabled.</p>
-        </div>
-      </template>
-    </UTable>
+        <template #lastUsedAt-cell="{ row }">
+          <span class="text-sm text-muted">{{ formatDate(row.original.lastUsedAt) }}</span>
+        </template>
 
-    <UTable
-      v-else
-      :data="projectData"
-      :columns="projectColumns"
-      :loading="status === 'pending'"
-      class="cursor-pointer"
-      v-model:sorting="projectSorting"
-      :on-select="onProjectSelect"
-    >
-      <template #projectName-cell="{ row }">
-        <span class="text-sm">{{ row.original.projectName }}</span>
-      </template>
+        <template #empty>
+          <div class="flex flex-col items-center gap-2 py-12 text-muted">
+            <UIcon
+              name="i-lucide-inbox"
+              class="text-4xl"
+            />
+            <p>No sessions yet. Start Claude Code with OTel enabled.</p>
+          </div>
+        </template>
+      </UTable>
+    </div>
 
-      <template #sessionCount-cell="{ row }">
-        {{ row.original.sessionCount.toLocaleString() }}
-      </template>
+    <div v-else>
+      <div class="mb-3 flex items-center justify-end">
+        <TableJsonCopyButton
+          table-name="projects"
+          :rows="projectData"
+          :columns="projectColumns"
+        />
+      </div>
 
-      <template #requestTokensTotal-cell="{ row }">
-        {{ formatTokens(row.original.requestTokensTotal) }}
-      </template>
+      <UTable
+        :data="projectData"
+        :columns="projectColumns"
+        :loading="status === 'pending'"
+        class="cursor-pointer"
+        v-model:sorting="projectSorting"
+        :on-select="onProjectSelect"
+      >
+        <template #projectName-cell="{ row }">
+          <span class="text-sm">{{ row.original.projectName }}</span>
+        </template>
 
-      <template #responseTokensTotal-cell="{ row }">
-        {{ formatTokens(row.original.responseTokensTotal) }}
-      </template>
+        <template #sessionCount-cell="{ row }">
+          {{ row.original.sessionCount.toLocaleString() }}
+        </template>
 
-      <template #cacheReadTokensTotal-cell="{ row }">
-        {{ formatTokens(row.original.cacheReadTokensTotal) }}
-      </template>
+        <template #requestTokensTotal-cell="{ row }">
+          {{ formatTokens(row.original.requestTokensTotal) }}
+        </template>
 
-      <template #cacheCreationTokensTotal-cell="{ row }">
-        {{ formatTokens(row.original.cacheCreationTokensTotal) }}
-      </template>
+        <template #responseTokensTotal-cell="{ row }">
+          {{ formatTokens(row.original.responseTokensTotal) }}
+        </template>
 
-      <template #createdAt-cell="{ row }">
-        <span class="text-sm text-muted">{{ formatDate(row.original.createdAt) }}</span>
-      </template>
+        <template #cacheReadTokensTotal-cell="{ row }">
+          {{ formatTokens(row.original.cacheReadTokensTotal) }}
+        </template>
 
-      <template #lastUsedAt-cell="{ row }">
-        <span class="text-sm text-muted">{{ formatDate(row.original.lastUsedAt) }}</span>
-      </template>
+        <template #cacheCreationTokensTotal-cell="{ row }">
+          {{ formatTokens(row.original.cacheCreationTokensTotal) }}
+        </template>
 
-      <template #empty>
-        <div class="flex flex-col items-center gap-2 py-12 text-muted">
-          <UIcon
-            name="i-lucide-inbox"
-            class="text-4xl"
-          />
-          <p>No projects yet. Sessions will appear here once grouped.</p>
-        </div>
-      </template>
-    </UTable>
+        <template #createdAt-cell="{ row }">
+          <span class="text-sm text-muted">{{ formatDate(row.original.createdAt) }}</span>
+        </template>
+
+        <template #lastUsedAt-cell="{ row }">
+          <span class="text-sm text-muted">{{ formatDate(row.original.lastUsedAt) }}</span>
+        </template>
+
+        <template #empty>
+          <div class="flex flex-col items-center gap-2 py-12 text-muted">
+            <UIcon
+              name="i-lucide-inbox"
+              class="text-4xl"
+            />
+            <p>No projects yet. Sessions will appear here once grouped.</p>
+          </div>
+        </template>
+      </UTable>
+    </div>
   </UContainer>
 </template>

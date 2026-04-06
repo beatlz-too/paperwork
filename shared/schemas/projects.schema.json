@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "paperwork.projects.table.json",
+  "title": "Projects table JSON",
+  "description": "JSON Schema for the copied projects table payload.",
+  "type": "object",
+  "properties": {
+    "projects": {
+      "type": "object",
+      "description": "Copied projects table payload.",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "description": "Ordered rows copied from the grouped projects table.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "projectName": {
+                "description": "Project name shown in the table.",
+                "type": "string"
+              },
+              "sessionCount": {
+                "description": "Number of sessions in the project group.",
+                "type": "number"
+              },
+              "requestTokensTotal": {
+                "description": "Total input tokens across the project group.",
+                "type": "number"
+              },
+              "responseTokensTotal": {
+                "description": "Total output tokens across the project group.",
+                "type": "number"
+              },
+              "cacheReadTokensTotal": {
+                "description": "Total cache-read tokens across the project group.",
+                "type": "number"
+              },
+              "cacheCreationTokensTotal": {
+                "description": "Total cache-write tokens across the project group.",
+                "type": "number"
+              },
+              "createdAt": {
+                "description": "Earliest session creation time in the group.",
+                "type": "string"
+              },
+              "lastUsedAt": {
+                "description": "Most recent activity time in the group.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "projectName",
+              "sessionCount",
+              "requestTokensTotal",
+              "responseTokensTotal",
+              "cacheReadTokensTotal",
+              "cacheCreationTokensTotal",
+              "createdAt",
+              "lastUsedAt"
+            ]
+          }
+        }
+      },
+      "required": [
+        "rows"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "projects"
+  ],
+  "additionalProperties": false
+}
