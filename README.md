@@ -158,7 +158,7 @@ The collector must be running **before** you start Claude Code so that spans are
 
 _Project Name_ - This is an optional field that you can use to group your sessions. For example, if you are working on multiple projects, you can use this field to group your sessions by project. If you don't assign a project name, it's going to default to your source folder's name.
 
-**Renaming** - Don't worry if you forgot to stop Otel and rename your project. You can always rename your project by clicking on the project name in the webapp's UI.
+**Renaming** - Don't worry if you forgot to stop Otel and rename your project. You can always rename it by clicking on the project's name in the webapp. If you are using this with backend only, just rename it in the row; there's no project's table.
 
 ```bash
 bun run telemetry <project-name>
