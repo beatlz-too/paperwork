@@ -1,8 +1,8 @@
-import { getBreakdownChartData, getUsageChartData } from '#server/services/charts'
+import { getAreaChartData, getBreakdownChartData, getUsageChartData } from '#server/services/charts'
 import type { UsageChartDimension, UsageChartKind, UsageChartPage } from '#shared/types'
 
 const PAGES: UsageChartPage[] = ['main', 'session', 'prompt']
-const KINDS: UsageChartKind[] = ['stacked', 'breakdown']
+const KINDS: UsageChartKind[] = ['stacked', 'breakdown', 'area']
 const DIMENSIONS: UsageChartDimension[] = ['session', 'project']
 
 export default defineEventHandler(async (event) => {
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!KINDS.includes(kind)) {
-    throw createError({ statusCode: 400, message: 'kind must be one of stacked, breakdown' })
+    throw createError({ statusCode: 400, message: 'kind must be one of stacked, breakdown, area' })
   }
 
   if (!DIMENSIONS.includes(dimension)) {
@@ -28,6 +28,15 @@ export default defineEventHandler(async (event) => {
 
   if (kind === 'breakdown') {
     return getBreakdownChartData({
+      page,
+      sessionId,
+      promptId: query.promptId ? String(query.promptId) : undefined,
+      projectName
+    })
+  }
+
+  if (kind === 'area') {
+    return getAreaChartData({
       page,
       sessionId,
       promptId: query.promptId ? String(query.promptId) : undefined,

@@ -47,7 +47,7 @@ export interface AggregatedPrompt {
 }
 
 export type UsageChartPage = 'main' | 'session' | 'prompt'
-export type UsageChartKind = 'stacked' | 'breakdown'
+export type UsageChartKind = 'stacked' | 'breakdown' | 'area'
 export type UsageChartDimension = 'session' | 'project'
 
 export interface UsageChartWeights {
@@ -90,5 +90,26 @@ export interface BreakdownChartResponse {
   page: UsageChartPage
   labels: string[]
   datasets: BreakdownChartDataset[]
+  weights: UsageChartWeights
+}
+
+export interface UsageAreaChartDataset {
+  label: string
+  data: number[]
+  borderColor: string
+  backgroundColor: string
+  fill: boolean
+  tension: number
+  pointRadius: number
+  pointHoverRadius: number
+  borderWidth: number
+  stack: string
+  borderSkipped: false
+}
+
+export interface UsageAreaChartResponse {
+  page: UsageChartPage
+  labels: string[]
+  datasets: UsageAreaChartDataset[]
   weights: UsageChartWeights
 }

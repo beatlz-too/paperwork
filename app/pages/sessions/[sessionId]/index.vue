@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { TableColumn } from '@nuxt/ui'
-import type { AggregatedPrompt, BreakdownChartResponse, Session, UsageChartResponse } from '#shared/types'
+import type { AggregatedPrompt, BreakdownChartResponse, Session, UsageAreaChartResponse, UsageChartResponse } from '#shared/types'
 import { sortableHeader } from '~/utils/table'
 
 const route = useRoute()
@@ -29,6 +29,9 @@ const promptRows = computed<PromptRow[]>(() =>
 
 const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
   query: { page: 'session', sessionId }
+})
+const { data: areaChartData, status: areaChartStatus } = await useFetch<UsageAreaChartResponse>('/api/charts', {
+  query: { page: 'session', kind: 'area', sessionId }
 })
 const { data: breakdownData, status: breakdownStatus } = await useFetch<BreakdownChartResponse>('/api/charts', {
   query: { page: 'session', kind: 'breakdown', sessionId }
@@ -273,6 +276,28 @@ function onNameKeydown(e: KeyboardEvent) {
         <UsageBreakdownBarChart
           v-else-if="breakdownData"
           :chart-data="breakdownData"
+        />
+      </UCard>
+
+      <UCard class="lg:col-span-2">
+        <template #header>
+          <div>
+            <h2 class="text-base font-semibold">
+              Token Mix Over Time
+            </h2>
+            <p class="text-sm text-muted">
+              Daily share of weighted token types for this session, normalized to 100%.
+            </p>
+          </div>
+        </template>
+
+        <USkeleton
+          v-if="areaChartStatus === 'pending'"
+          class="h-[360px] w-full"
+        />
+        <TokenMixAreaChart
+          v-else-if="areaChartData"
+          :chart-data="areaChartData"
         />
       </UCard>
     </div>

@@ -1,7 +1,10 @@
 import { and, asc, eq, isNull, or, sum } from 'drizzle-orm'
 import { prompts, sessions } from '#server/db/schema'
 import { useDb } from '#server/db/client'
+import { ColorPalette } from '#shared/types/colors.enum'
 import type {
+  UsageAreaChartDataset,
+  UsageAreaChartResponse,
   BreakdownChartResponse,
   UsageChartDataset,
   UsageChartDimension,
@@ -17,6 +20,14 @@ type ChartRow = {
   route?: string
 }
 
+type DailyTokenRow = {
+  day: string
+  prompt: number
+  response: number
+  cacheRead: number
+  cacheCreation: number
+}
+
 const TOKEN_WEIGHTS: UsageChartWeights = {
   prompt: 1,
   response: 5,
@@ -27,15 +38,21 @@ const TOKEN_WEIGHTS: UsageChartWeights = {
 }
 
 const PALETTE = [
-  '#0f766e',
-  '#2563eb',
-  '#7c3aed',
-  '#db2777',
-  '#ea580c',
-  '#16a34a',
-  '#ca8a04',
-  '#475569'
+  ColorPalette.green,
+  ColorPalette.blue,
+  ColorPalette.purple,
+  ColorPalette.pink,
+  ColorPalette.orange
 ]
+
+const AREA_COLORS = PALETTE
+const TOKEN_ORDER: Array<keyof UsageChartWeights> = ['prompt', 'response', 'cacheRead', 'cacheCreation']
+const TOKEN_LABELS: Record<keyof UsageChartWeights, string> = {
+  prompt: 'Input',
+  response: 'Output',
+  cacheRead: 'Cache Read',
+  cacheCreation: 'Cache Write'
+}
 
 function rgba(hex: string, alpha: number): string {
   const normalized = hex.replace('#', '')
@@ -54,6 +71,10 @@ function formatLabel(date: Date): string {
   return date.toISOString()
 }
 
+function formatDay(date: Date): string {
+  return date.toISOString().slice(0, 10)
+}
+
 function weightTokens(values: {
   prompt?: number
   response?: number
@@ -64,6 +85,72 @@ function weightTokens(values: {
     + (values.response ?? 0) * TOKEN_WEIGHTS.response
     + (values.cacheRead ?? 0) * TOKEN_WEIGHTS.cacheRead
     + (values.cacheCreation ?? 0) * TOKEN_WEIGHTS.cacheCreation
+}
+
+function aggregateAreaRows(rows: Array<{
+  day: string
+  prompt: number
+  response: number
+  cacheRead: number
+  cacheCreation: number
+}>): DailyTokenRow[] {
+  const grouped = new Map<string, DailyTokenRow>()
+
+  for (const row of rows) {
+    const existing = grouped.get(row.day)
+    if (existing) {
+      existing.prompt += row.prompt
+      existing.response += row.response
+      existing.cacheRead += row.cacheRead
+      existing.cacheCreation += row.cacheCreation
+      continue
+    }
+
+    grouped.set(row.day, {
+      day: row.day,
+      prompt: row.prompt,
+      response: row.response,
+      cacheRead: row.cacheRead,
+      cacheCreation: row.cacheCreation
+    })
+  }
+
+  return [...grouped.values()].sort((a, b) => a.day.localeCompare(b.day))
+}
+
+function buildAreaChart(rows: DailyTokenRow[], page: UsageChartPage): UsageAreaChartResponse {
+  const sortedRows = [...rows].sort((a, b) => a.day.localeCompare(b.day))
+  const labels = sortedRows.map(row => row.day)
+  const totals = sortedRows.map(row => weightTokens(row))
+
+  const datasets: UsageAreaChartDataset[] = TOKEN_ORDER.map((token, index) => {
+    const color = AREA_COLORS[index % AREA_COLORS.length]!
+
+    return {
+      label: TOKEN_LABELS[token],
+      data: sortedRows.map((row, rowIndex) => {
+        const weightedValue = row[token] * TOKEN_WEIGHTS[token]
+        const total = totals[rowIndex] ?? 0
+        return total === 0 ? 0 : (weightedValue / total) * 100
+      }),
+      borderColor: color,
+      backgroundColor: rgba(color, 0.3),
+      fill: true,
+      tension: 0.28,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      borderWidth: 2,
+      stack: 'tokens',
+      borderSkipped: false
+    }
+  })
+
+  return {
+    page,
+    labels,
+    datasets,
+    weights: TOKEN_WEIGHTS
+  }
 }
 
 function buildChart(rows: ChartRow[], page: UsageChartPage): UsageChartResponse {
@@ -119,6 +206,23 @@ async function loadMainRows(projectName?: string): Promise<ChartRow[]> {
       cacheCreation: row.cacheCreationTokensTotal
     })
   }))
+}
+
+async function loadMainAreaRows(projectName?: string): Promise<DailyTokenRow[]> {
+  const db = useDb()
+  const rows = await db
+    .select()
+    .from(sessions)
+    .where(projectName ? projectCondition(projectName) : undefined)
+    .orderBy(asc(sessions.lastUsedAt))
+
+  return aggregateAreaRows(rows.map(row => ({
+    day: formatDay(row.lastUsedAt),
+    prompt: row.requestTokensTotal,
+    response: row.responseTokensTotal,
+    cacheRead: row.cacheReadTokensTotal,
+    cacheCreation: row.cacheCreationTokensTotal
+  })))
 }
 
 async function loadMainProjectRows(): Promise<ChartRow[]> {
@@ -203,6 +307,23 @@ async function loadSessionRows(sessionId: string): Promise<ChartRow[]> {
   }))
 }
 
+async function loadSessionAreaRows(sessionId: string): Promise<DailyTokenRow[]> {
+  const db = useDb()
+  const rows = await db
+    .select()
+    .from(prompts)
+    .where(eq(prompts.sessionId, sessionId))
+    .orderBy(asc(prompts.createdAt))
+
+  return aggregateAreaRows(rows.map(row => ({
+    day: formatDay(row.createdAt),
+    prompt: row.promptTokens,
+    response: row.responseTokens,
+    cacheRead: row.cacheReadTokens,
+    cacheCreation: row.cacheCreationTokens
+  })))
+}
+
 async function loadPromptRows(sessionId: string, promptId: string): Promise<ChartRow[]> {
   const db = useDb()
   const rows = await db
@@ -221,6 +342,23 @@ async function loadPromptRows(sessionId: string, promptId: string): Promise<Char
       cacheCreation: row.cacheCreationTokens
     })
   }))
+}
+
+async function loadPromptAreaRows(sessionId: string, promptId: string): Promise<DailyTokenRow[]> {
+  const db = useDb()
+  const rows = await db
+    .select()
+    .from(prompts)
+    .where(and(eq(prompts.sessionId, sessionId), eq(prompts.promptId, promptId)))
+    .orderBy(asc(prompts.createdAt))
+
+  return aggregateAreaRows(rows.map(row => ({
+    day: formatDay(row.createdAt),
+    prompt: row.promptTokens,
+    response: row.responseTokens,
+    cacheRead: row.cacheReadTokens,
+    cacheCreation: row.cacheCreationTokens
+  })))
 }
 
 const BREAKDOWN_LABELS = ['Input', 'Output', 'Cache Read', 'Cache Write']
@@ -288,6 +426,28 @@ export async function getBreakdownChartData(params: {
     }],
     weights: TOKEN_WEIGHTS
   }
+}
+
+export async function getAreaChartData(params: {
+  page: UsageChartPage
+  sessionId?: string
+  promptId?: string
+  projectName?: string
+}): Promise<UsageAreaChartResponse> {
+  if (params.page === 'main') {
+    return buildAreaChart(await loadMainAreaRows(params.projectName), 'main')
+  }
+
+  if (params.page === 'session') {
+    if (!params.sessionId) throw createError({ statusCode: 400, message: 'sessionId required' })
+    return buildAreaChart(await loadSessionAreaRows(params.sessionId), 'session')
+  }
+
+  if (!params.sessionId || !params.promptId) {
+    throw createError({ statusCode: 400, message: 'sessionId and promptId required' })
+  }
+
+  return buildAreaChart(await loadPromptAreaRows(params.sessionId, params.promptId), 'prompt')
 }
 
 export async function getUsageChartData(params: {

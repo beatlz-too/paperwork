@@ -28,7 +28,15 @@ useSeoMeta({
           to="/"
           class="text-lg tracking-tight logo"
         >
-          Paperwork
+          <wacky-text
+            :drift="3"
+            :style="{
+              fontSize: '1.75rem',
+              
+            }"
+          >
+            Paperwork
+          </wacky-text>
         </NuxtLink>
       </template>
 
