@@ -302,6 +302,14 @@ function onNameKeydown(e: KeyboardEvent) {
       </UCard>
     </div>
 
+    <div class="mb-3 flex items-center justify-end">
+      <TableJsonCopyButton
+        table-name="prompts"
+        :rows="promptRows"
+        :columns="columns"
+      />
+    </div>
+
     <UTable
       v-model:sorting="sorting"
       :data="promptRows"

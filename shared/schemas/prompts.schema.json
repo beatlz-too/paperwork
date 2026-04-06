@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "paperwork.prompts.table.json",
+  "title": "Prompts table JSON",
+  "description": "JSON Schema for the copied prompts table payload.",
+  "type": "object",
+  "properties": {
+    "prompts": {
+      "type": "object",
+      "description": "Copied prompts table payload.",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "description": "Ordered rows copied from the session prompt table.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "promptNumber": {
+                "description": "1-based prompt number shown in the table.",
+                "type": "number"
+              },
+              "promptId": {
+                "description": "Stable prompt identifier shown in the table.",
+                "type": "string"
+              },
+              "apiCalls": {
+                "description": "Number of API calls included in the prompt.",
+                "type": "number"
+              },
+              "toolNames": {
+                "description": "Tool names used by the prompt.",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "promptTokens": {
+                "description": "Input tokens attributed to the prompt.",
+                "type": "number"
+              },
+              "responseTokens": {
+                "description": "Output tokens attributed to the prompt.",
+                "type": "number"
+              },
+              "cacheReadTokens": {
+                "description": "Cache-read tokens attributed to the prompt.",
+                "type": "number"
+              },
+              "cacheCreationTokens": {
+                "description": "Cache-write tokens attributed to the prompt.",
+                "type": "number"
+              },
+              "createdAt": {
+                "description": "Prompt creation timestamp.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "promptNumber",
+              "promptId",
+              "apiCalls",
+              "toolNames",
+              "promptTokens",
+              "responseTokens",
+              "cacheReadTokens",
+              "cacheCreationTokens",
+              "createdAt"
+            ]
+          }
+        }
+      },
+      "required": [
+        "rows"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "prompts"
+  ],
+  "additionalProperties": false
+}

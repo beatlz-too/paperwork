@@ -205,6 +205,14 @@ function onSelect(_e: Event, row: TableRow<Session>) {
       </UCard>
     </div>
 
+    <div class="mb-3 flex items-center justify-end">
+      <TableJsonCopyButton
+        table-name="sessions"
+        :rows="sessions ?? []"
+        :columns="columns"
+      />
+    </div>
+
     <UTable
       :data="sessions ?? []"
       :columns="columns"

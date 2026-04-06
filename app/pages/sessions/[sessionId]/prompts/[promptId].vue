@@ -232,6 +232,14 @@ function navigate(p: AggregatedPrompt) {
       </UCard>
     </div>
 
+    <div class="mb-3 flex items-center justify-end">
+      <TableJsonCopyButton
+        table-name="apiCalls"
+        :rows="apiCallRows"
+        :columns="columns"
+      />
+    </div>
+
     <!-- Per-API-call breakdown -->
     <h2 class="text-lg font-semibold mb-3">
       API Call Breakdown

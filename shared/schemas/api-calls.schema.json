@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "paperwork.apiCalls.table.json",
+  "title": "API calls table JSON",
+  "description": "JSON Schema for the copied per-prompt API call table payload.",
+  "type": "object",
+  "properties": {
+    "apiCalls": {
+      "type": "object",
+      "description": "Copied API calls table payload.",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "description": "Ordered rows copied from the per-prompt API call table.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "callNumber": {
+                "description": "1-based API call number shown in the table.",
+                "type": "number"
+              },
+              "createdAt": {
+                "description": "API call creation timestamp.",
+                "type": "string"
+              },
+              "toolName": {
+                "description": "Tool name shown for the call.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "promptTokens": {
+                "description": "Input tokens for the call.",
+                "type": "number"
+              },
+              "responseTokens": {
+                "description": "Output tokens for the call.",
+                "type": "number"
+              },
+              "cacheReadTokens": {
+                "description": "Cache-read tokens for the call.",
+                "type": "number"
+              },
+              "cacheCreationTokens": {
+                "description": "Cache-write tokens for the call.",
+                "type": "number"
+              }
+            },
+            "required": [
+              "callNumber",
+              "createdAt",
+              "toolName",
+              "promptTokens",
+              "responseTokens",
+              "cacheReadTokens",
+              "cacheCreationTokens"
+            ]
+          }
+        }
+      },
+      "required": [
+        "rows"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "apiCalls"
+  ],
+  "additionalProperties": false
+}
