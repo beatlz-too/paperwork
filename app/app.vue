@@ -31,8 +31,7 @@ useSeoMeta({
           <wacky-text
             :drift="3"
             :style="{
-              fontSize: '1.75rem',
-              
+              fontSize: '1.75rem'
             }"
           >
             Paperwork
@@ -41,7 +40,17 @@ useSeoMeta({
       </template>
 
       <template #right>
-        <UColorModeButton :ui="{ base: 'cursor-pointer' }" />
+        <div class="flex items-center gap-2">
+          <UButton
+            to="/about"
+            variant="ghost"
+            color="neutral"
+            :ui="{ base: 'cursor-pointer' }"
+          >
+            About
+          </UButton>
+          <UColorModeButton :ui="{ base: 'cursor-pointer' }" />
+        </div>
       </template>
     </UHeader>
 
