@@ -1,8 +1,4 @@
----
-name: Report Generator
-description: Uses the template in this file to aggregate it with a table's data and schema to create a diagnosis and prognosis.
----
-
+const REPORT_TEMPLATE = `
 ## Agent
 
 You are a data analyst with an accute expertise on Claude Code's token usage and telemetry data.
@@ -38,3 +34,8 @@ A prognosis of the user's Claude Code token usage.
 ## Tips
 
 Some general tips on how to optimize the user's Claude Code token usage.
+`.trim()
+
+export function generateTemplate(): string {
+  return REPORT_TEMPLATE
+}
