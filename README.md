@@ -107,7 +107,7 @@ All services should show `healthy` or `running`. If any are restarting, wait 30 
 The Postgres database is exposed on port **5432**. Back in `paperwork/.env`, set:
 
 ```env
-DATABASE_URL=postgresql://postgres:your-strong-postgres-password@localhost:5432/postgres
+DATABASE_URL=postgresql://postgres.your-username:your-strong-postgres-password@localhost:5432/postgres
 ```
 
 Use the same `POSTGRES_PASSWORD` you chose in step 3.
@@ -173,8 +173,15 @@ Add the following to your Claude Code settings (`~/.claude/settings.json`):
 ```json
 {
   "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_TRACES_EXPORTER": "otlp",
+    "OTEL_METRICS_EXPORTER": "otlp",
+    "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_METRIC_EXPORT_INTERVAL": "10000",
+    "OTEL_LOGS_EXPORT_INTERVAL": "5000",
+    "OTEL_LOG_TOOL_DETAILS": "1",
     "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318",
-    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf"
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/json"
   }
 }
 ```
