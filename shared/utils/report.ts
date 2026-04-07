@@ -1,4 +1,4 @@
-import reportPromptTemplate from '../docs/report.prompt.md?raw'
+import { generateTemplate } from '../docs/report.prompt'
 import apiCallsSchema from '../schemas/api-calls.schema.json'
 import projectsSchema from '../schemas/projects.schema.json'
 import promptsSchema from '../schemas/prompts.schema.json'
@@ -14,7 +14,7 @@ const tableSchemas = {
 } satisfies Record<TableJsonTableName, unknown>
 
 export function buildReportPrompt(tableName: string, tableSchema: string, tableData: string): string {
-  return reportPromptTemplate
+  return generateTemplate()
     .replaceAll('{{ table_name }}', tableName)
     .replaceAll('{{ table_schema }}', tableSchema)
     .replaceAll('{{ table_data }}', tableData)
