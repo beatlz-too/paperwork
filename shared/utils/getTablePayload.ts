@@ -1,7 +1,7 @@
 import type { TableJsonPayload, TableJsonTableName } from '../types/tables.interface'
 
 export interface TableJsonColumn {
-  accessorKey?: string | number | null
+  accessorKey?: unknown
 }
 
 function normalizeValue(value: unknown): unknown {

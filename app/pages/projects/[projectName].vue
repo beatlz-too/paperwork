@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import type { TableColumn, TableRow } from '@nuxt/ui'
+import type { TableRow } from '@nuxt/ui'
 import type { BreakdownChartResponse, Session, UsageAreaChartResponse, UsageChartResponse } from '#shared/types'
-import { sortableHeader } from '~/utils/table'
+import { buildReportUrl } from '~/utils/reportUrl'
+import { sessionColumns } from '~/utils/tableColumns'
 
 const route = useRoute()
 const router = useRouter()
@@ -33,17 +34,6 @@ const totals = computed(() => {
     lastUsedAt: list.reduce((max, r) => r.lastUsedAt > max ? r.lastUsedAt : max, '')
   }
 })
-
-const columns: TableColumn<Session>[] = [
-  { accessorKey: 'name', header: sortableHeader<Session>('Session Name') },
-  { accessorKey: 'sessionId', header: sortableHeader<Session>('Session ID') },
-  { accessorKey: 'requestTokensTotal', header: sortableHeader<Session>('Input Tokens') },
-  { accessorKey: 'responseTokensTotal', header: sortableHeader<Session>('Output Tokens') },
-  { accessorKey: 'cacheReadTokensTotal', header: sortableHeader<Session>('Cache Read') },
-  { accessorKey: 'cacheCreationTokensTotal', header: sortableHeader<Session>('Cache Write') },
-  { accessorKey: 'createdAt', header: sortableHeader<Session>('Created (UTC)') },
-  { accessorKey: 'lastUsedAt', header: sortableHeader<Session>('Last Used (UTC)') }
-]
 
 const sorting = ref([{ id: 'lastUsedAt', desc: true }])
 
@@ -206,16 +196,17 @@ function onSelect(_e: Event, row: TableRow<Session>) {
     </div>
 
     <div class="mb-3 flex items-center justify-end">
-      <TableJsonCopyButton
+      <TableExportActions
         table-name="sessions"
         :rows="sessions ?? []"
-        :columns="columns"
+        :columns="sessionColumns"
+        :report-href="buildReportUrl('sessions', { projectName })"
       />
     </div>
 
     <UTable
       :data="sessions ?? []"
-      :columns="columns"
+      :columns="sessionColumns"
       :loading="status === 'pending'"
       class="cursor-pointer"
       v-model:sorting="sorting"

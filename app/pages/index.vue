@@ -1,7 +1,9 @@
 <script lang="ts" setup>
-import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { BreakdownChartResponse, ProjectSummary, Session, UsageAreaChartResponse, UsageChartDimension, UsageChartResponse } from '#shared/types'
-import { sortableHeader } from '~/utils/table'
+import { buildProjectData } from '~/utils/tableRows'
+import { buildReportUrl } from '~/utils/reportUrl'
+import { projectColumns, sessionColumns } from '~/utils/tableColumns'
+import type { TableRow } from '@nuxt/ui'
 
 useSeoMeta({ title: 'Sessions – Paperwork' })
 
@@ -9,42 +11,7 @@ const dimension = ref<UsageChartDimension>('session')
 
 const { data: sessions, status } = await useFetch<Session[]>('/api/sessions')
 
-const projectData = computed<ProjectSummary[]>(() => {
-  if (!sessions.value) return []
-
-  const grouped = new Map<string, ProjectSummary>()
-
-  for (const session of sessions.value) {
-    const key = session.projectName?.trim() || 'other'
-    const existing = grouped.get(key)
-
-    if (existing) {
-      existing.sessionCount++
-      existing.requestTokensTotal += session.requestTokensTotal
-      existing.responseTokensTotal += session.responseTokensTotal
-      existing.cacheReadTokensTotal += session.cacheReadTokensTotal
-      existing.cacheCreationTokensTotal += session.cacheCreationTokensTotal
-      if (session.lastUsedAt > existing.lastUsedAt) existing.lastUsedAt = session.lastUsedAt
-      if (session.createdAt < existing.createdAt) existing.createdAt = session.createdAt
-    }
-    else {
-      grouped.set(key, {
-        projectName: key,
-        sessionCount: 1,
-        requestTokensTotal: session.requestTokensTotal,
-        responseTokensTotal: session.responseTokensTotal,
-        cacheReadTokensTotal: session.cacheReadTokensTotal,
-        cacheCreationTokensTotal: session.cacheCreationTokensTotal,
-        createdAt: session.createdAt,
-        lastUsedAt: session.lastUsedAt
-      })
-    }
-  }
-
-  return [...grouped.values()].sort((a, b) =>
-    new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime()
-  )
-})
+const projectData = computed<ProjectSummary[]>(() => buildProjectData(sessions.value ?? []))
 
 const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
   query: { page: 'main', dimension }
@@ -55,29 +22,6 @@ const { data: areaChartData, status: areaChartStatus } = await useFetch<UsageAre
 const { data: breakdownData, status: breakdownStatus } = await useFetch<BreakdownChartResponse>('/api/charts', {
   query: { page: 'main', kind: 'breakdown' }
 })
-
-const sessionColumns: TableColumn<Session>[] = [
-  { accessorKey: 'projectName', header: sortableHeader<Session>('Project') },
-  { accessorKey: 'name', header: sortableHeader<Session>('Session Name') },
-  { accessorKey: 'sessionId', header: sortableHeader<Session>('Session ID') },
-  { accessorKey: 'requestTokensTotal', header: sortableHeader<Session>('Input Tokens') },
-  { accessorKey: 'responseTokensTotal', header: sortableHeader<Session>('Output Tokens') },
-  { accessorKey: 'cacheReadTokensTotal', header: sortableHeader<Session>('Cache Read') },
-  { accessorKey: 'cacheCreationTokensTotal', header: sortableHeader<Session>('Cache Write') },
-  { accessorKey: 'createdAt', header: sortableHeader<Session>('Created (UTC)') },
-  { accessorKey: 'lastUsedAt', header: sortableHeader<Session>('Last Used (UTC)') }
-]
-
-const projectColumns: TableColumn<ProjectSummary>[] = [
-  { accessorKey: 'projectName', header: sortableHeader<ProjectSummary>('Project') },
-  { accessorKey: 'sessionCount', header: sortableHeader<ProjectSummary>('Sessions') },
-  { accessorKey: 'requestTokensTotal', header: sortableHeader<ProjectSummary>('Input Tokens') },
-  { accessorKey: 'responseTokensTotal', header: sortableHeader<ProjectSummary>('Output Tokens') },
-  { accessorKey: 'cacheReadTokensTotal', header: sortableHeader<ProjectSummary>('Cache Read') },
-  { accessorKey: 'cacheCreationTokensTotal', header: sortableHeader<ProjectSummary>('Cache Write') },
-  { accessorKey: 'createdAt', header: sortableHeader<ProjectSummary>('Created (UTC)') },
-  { accessorKey: 'lastUsedAt', header: sortableHeader<ProjectSummary>('Last Used (UTC)') }
-]
 
 const sessionSorting = ref([{ id: 'lastUsedAt', desc: true }])
 const projectSorting = ref([{ id: 'lastUsedAt', desc: true }])
@@ -205,10 +149,11 @@ function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
 
     <div v-if="dimension === 'session'">
       <div class="mb-3 flex items-center justify-end">
-        <TableJsonCopyButton
+        <TableExportActions
           table-name="sessions"
           :rows="sessions ?? []"
           :columns="sessionColumns"
+          :report-href="buildReportUrl('sessions', {})"
         />
       </div>
 
@@ -270,10 +215,11 @@ function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
 
     <div v-else>
       <div class="mb-3 flex items-center justify-end">
-        <TableJsonCopyButton
+        <TableExportActions
           table-name="projects"
           :rows="projectData"
           :columns="projectColumns"
+          :report-href="buildReportUrl('projects', {})"
         />
       </div>
 
