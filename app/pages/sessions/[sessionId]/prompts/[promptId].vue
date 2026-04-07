@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import type { TableColumn } from '@nuxt/ui'
 import type { AggregatedPrompt, BreakdownChartResponse, Prompt, UsageChartResponse } from '#shared/types'
-import { sortableHeader } from '~/utils/table'
+import { buildReportUrl } from '~/utils/reportUrl'
+import { buildApiCallRows } from '~/utils/tableRows'
+import { apiCallColumns } from '~/utils/tableColumns'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,14 +26,8 @@ const next = computed(() => currentIndex.value >= 0 && currentIndex.value < (all
 const { data: apiCalls, status } = await useFetch<Prompt[]>(
   () => `/api/sessions/${sessionId}/prompts/${promptId.value}`
 )
-type ApiCallRow = Prompt & { callNumber: number }
 
-const apiCallRows = computed<ApiCallRow[]>(() =>
-  (apiCalls.value ?? []).map((row, index) => ({
-    ...row,
-    callNumber: index + 1
-  }))
-)
+const apiCallRows = computed(() => buildApiCallRows(apiCalls.value ?? []))
 
 const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
   query: computed(() => ({
@@ -51,16 +46,6 @@ const { data: breakdownData, status: breakdownStatus } = await useFetch<Breakdow
 })
 
 useSeoMeta({ title: computed(() => `Prompt ${promptId.value.slice(0, 8)}… – Paperwork`) })
-
-const columns: TableColumn<ApiCallRow>[] = [
-  { accessorKey: 'callNumber', header: sortableHeader<ApiCallRow>('Call #') },
-  { accessorKey: 'createdAt', header: sortableHeader<ApiCallRow>('Time') },
-  { accessorKey: 'toolName', header: sortableHeader<ApiCallRow>('Tool') },
-  { accessorKey: 'promptTokens', header: sortableHeader<ApiCallRow>('Input') },
-  { accessorKey: 'responseTokens', header: sortableHeader<ApiCallRow>('Output') },
-  { accessorKey: 'cacheReadTokens', header: sortableHeader<ApiCallRow>('Cache Read') },
-  { accessorKey: 'cacheCreationTokens', header: sortableHeader<ApiCallRow>('Cache Write') }
-]
 
 const sorting = ref([{ id: 'callNumber', desc: false }])
 
@@ -233,10 +218,11 @@ function navigate(p: AggregatedPrompt) {
     </div>
 
     <div class="mb-3 flex items-center justify-end">
-      <TableJsonCopyButton
+      <TableExportActions
         table-name="apiCalls"
         :rows="apiCallRows"
-        :columns="columns"
+        :columns="apiCallColumns"
+        :report-href="buildReportUrl('apiCalls', { sessionId, promptId })"
       />
     </div>
 
@@ -247,7 +233,7 @@ function navigate(p: AggregatedPrompt) {
     <UTable
       v-model:sorting="sorting"
       :data="apiCallRows"
-      :columns="columns"
+      :columns="apiCallColumns"
       :loading="status === 'pending'"
     >
       <template #callNumber-cell="{ row }">

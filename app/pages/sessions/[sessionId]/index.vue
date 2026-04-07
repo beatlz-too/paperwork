@@ -1,7 +1,9 @@
 <script lang="ts" setup>
-import type { TableColumn } from '@nuxt/ui'
 import type { AggregatedPrompt, BreakdownChartResponse, Session, UsageAreaChartResponse, UsageChartResponse } from '#shared/types'
-import { sortableHeader } from '~/utils/table'
+import type { TableRow } from '@nuxt/ui'
+import { buildReportUrl } from '~/utils/reportUrl'
+import { buildPromptRows } from '~/utils/tableRows'
+import { promptColumns, type PromptTableRow } from '~/utils/tableColumns'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,14 +20,7 @@ useSeoMeta({
 const { data: prompts, status } = await useFetch<AggregatedPrompt[]>(
   `/api/sessions/${sessionId}/prompts`
 )
-type PromptRow = AggregatedPrompt & { promptNumber: number }
-
-const promptRows = computed<PromptRow[]>(() =>
-  (prompts.value ?? []).map((prompt, index) => ({
-    ...prompt,
-    promptNumber: index + 1
-  }))
-)
+const promptRows = computed(() => buildPromptRows(prompts.value ?? []))
 
 const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
   query: { page: 'session', sessionId }
@@ -37,17 +32,6 @@ const { data: breakdownData, status: breakdownStatus } = await useFetch<Breakdow
   query: { page: 'session', kind: 'breakdown', sessionId }
 })
 
-const columns: TableColumn<PromptRow>[] = [
-  { accessorKey: 'promptNumber', header: sortableHeader<PromptRow>('Prompt #') },
-  { accessorKey: 'promptId', header: sortableHeader<PromptRow>('Prompt ID') },
-  { accessorKey: 'apiCalls', header: sortableHeader<PromptRow>('API Calls') },
-  { accessorKey: 'toolNames', header: sortableHeader<PromptRow>('Tools') },
-  { accessorKey: 'promptTokens', header: sortableHeader<PromptRow>('Input') },
-  { accessorKey: 'responseTokens', header: sortableHeader<PromptRow>('Output') },
-  { accessorKey: 'cacheReadTokens', header: sortableHeader<PromptRow>('Cache Read') },
-  { accessorKey: 'cacheCreationTokens', header: sortableHeader<PromptRow>('Cache Write') }
-]
-
 const sorting = ref([{ id: 'promptNumber', desc: false }])
 
 function formatTokens(n: number | null): string {
@@ -55,7 +39,7 @@ function formatTokens(n: number | null): string {
   return n.toLocaleString()
 }
 
-function onSelect(_e: Event, row: { original: PromptRow }) {
+function onSelect(_e: Event, row: TableRow<PromptTableRow>) {
   router.push(`/sessions/${sessionId}/prompts/${row.original.promptId}`)
 }
 
@@ -303,17 +287,18 @@ function onNameKeydown(e: KeyboardEvent) {
     </div>
 
     <div class="mb-3 flex items-center justify-end">
-      <TableJsonCopyButton
+      <TableExportActions
         table-name="prompts"
         :rows="promptRows"
-        :columns="columns"
+        :columns="promptColumns"
+        :report-href="buildReportUrl('prompts', { sessionId })"
       />
     </div>
 
     <UTable
       v-model:sorting="sorting"
       :data="promptRows"
-      :columns="columns"
+      :columns="promptColumns"
       :loading="status === 'pending'"
       class="cursor-pointer"
       :on-select="onSelect"
