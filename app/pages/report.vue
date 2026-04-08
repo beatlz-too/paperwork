@@ -150,11 +150,13 @@ const sourceHref = computed(() => {
         class="h-[24rem] w-full"
       />
 
+      <!-- eslint-disable vue/no-v-html -->
       <article
         v-else
         class="report-markdown space-y-4"
         v-html="reportHtml"
       />
+      <!-- eslint-enable vue/no-v-html -->
     </UCard>
   </UContainer>
 </template>

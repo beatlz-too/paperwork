@@ -1,21 +1,21 @@
 <template>
   <div
-    class="wacky-container"
     :class="{ 'is-not-magic': props.magic }"
-    :style="{ minHeight: props.style?.fontSize }"
+    class="wacky-container"
+    :style="containerStyle"
   >
-    <div class="wacky" :style="props.style">
+    <div
+      class="wacky"
+      :style="props.style"
+    >
       <slot />
     </div>
     <div
       v-for="(color, key) in activeColors"
-      class="wacky"
+      :key="getBouncyKey(key.toString())"
       :ref="getBouncyKey(key.toString())"
-      :style="{
-        ...props.style,
-        color,
-        margin: `${animationValues[key]![1]}px ${animationValues[key]![0]}px`,
-      }"
+      class="wacky"
+      :style="getWackyStyle(color, key)"
     >
       {{ innerText }}
     </div>
@@ -38,12 +38,15 @@ const props = withDefaults(
     colors: () => Object.values(ColorPalette),
     drift: () => 6,
     freq: () => 400,
-    magic: () => true,
-  },
+    magic: () => true
+  }
 )
 
 const theme = computed(() => useColorMode().value)
-const activeColors = computed(() => theme.value === "light" ? [...props.colors].reverse() : props.colors)
+const activeColors = computed(() => theme.value === 'light' ? [...props.colors].reverse() : props.colors)
+const containerStyle = computed(() => ({
+  minHeight: props.style?.fontSize
+}))
 
 const slots = useSlots()
 const innerText = ref('')
@@ -54,6 +57,12 @@ const vnode = slots.default?.()[0]
 innerText.value = typeof vnode?.children === 'string' ? vnode.children : ''
 
 const getBouncyKey = (key = '') => `${innerText.value.split(' ').join('_')}-${key}`
+
+const getWackyStyle = (color: string, key: number) => ({
+  ...props.style,
+  color,
+  margin: `${animationValues.value[key]![1]}px ${animationValues.value[key]![0]}px`
+})
 
 const getRandomInt = () => {
   const minCeiled = Math.ceil(-1 * props.drift)

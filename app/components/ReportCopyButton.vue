@@ -10,8 +10,7 @@ async function copyReport() {
   try {
     await navigator.clipboard.writeText(props.reportMarkdown)
     toast.add({ title: 'Copied report to clipboard' })
-  }
-  catch {
+  } catch {
     toast.add({ title: 'Could not copy report', color: 'error' })
   }
 }

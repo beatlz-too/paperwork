@@ -42,8 +42,7 @@ export function renderMarkdown(markdown: string): string {
       if (line.startsWith('```')) {
         flushCode()
         inCode = false
-      }
-      else {
+      } else {
         codeLines.push(line)
       }
       continue

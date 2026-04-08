@@ -16,8 +16,7 @@ export function buildProjectData(sessions: readonly Session[]): ProjectSummary[]
       existing.cacheCreationTokensTotal += session.cacheCreationTokensTotal
       if (session.lastUsedAt > existing.lastUsedAt) existing.lastUsedAt = session.lastUsedAt
       if (session.createdAt < existing.createdAt) existing.createdAt = session.createdAt
-    }
-    else {
+    } else {
       grouped.set(key, {
         projectName: key,
         sessionCount: 1,

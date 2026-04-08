@@ -27,8 +27,7 @@ async function copyTableJson() {
   try {
     await navigator.clipboard.writeText(JSON.stringify(getJsonPayload(), null, 2))
     toast.add({ title: `Copied ${props.tableName} JSON to clipboard` })
-  }
-  catch {
+  } catch {
     toast.add({ title: 'Could not copy table JSON', color: 'error' })
   }
 }
@@ -37,8 +36,7 @@ async function copyReportPrompt() {
   try {
     await navigator.clipboard.writeText(getReportPrompt())
     toast.add({ title: `Copied ${props.tableName} report to clipboard` })
-  }
-  catch {
+  } catch {
     toast.add({ title: 'Could not copy report prompt', color: 'error' })
   }
 }
