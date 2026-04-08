@@ -158,11 +158,11 @@ function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
       </div>
 
       <UTable
+        v-model:sorting="sessionSorting"
         :data="sessions ?? []"
         :columns="sessionColumns"
         :loading="status === 'pending'"
         class="cursor-pointer"
-        v-model:sorting="sessionSorting"
         :on-select="onSelect"
       >
         <template #projectName-cell="{ row }">
@@ -224,11 +224,11 @@ function onProjectSelect(_e: Event, row: TableRow<ProjectSummary>) {
       </div>
 
       <UTable
+        v-model:sorting="projectSorting"
         :data="projectData"
         :columns="projectColumns"
         :loading="status === 'pending'"
         class="cursor-pointer"
-        v-model:sorting="projectSorting"
         :on-select="onProjectSelect"
       >
         <template #projectName-cell="{ row }">

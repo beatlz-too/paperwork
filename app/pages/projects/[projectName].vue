@@ -205,11 +205,11 @@ function onSelect(_e: Event, row: TableRow<Session>) {
     </div>
 
     <UTable
+      v-model:sorting="sorting"
       :data="sessions ?? []"
       :columns="sessionColumns"
       :loading="status === 'pending'"
       class="cursor-pointer"
-      v-model:sorting="sorting"
       :on-select="onSelect"
     >
       <template #name-cell="{ row }">

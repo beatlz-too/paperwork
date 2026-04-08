@@ -34,16 +34,16 @@ const options = computed<ChartOptions<'bar'>>(() => ({
     legend: {
       display: false
     },
-      tooltip: {
-        mode: 'nearest',
-        intersect: true,
-        callbacks: {
-          label(context) {
-            const value = Number(context.parsed.y ?? 0)
-            return `${context.dataset.label}: ${value.toLocaleString()} input-equivalent weighted tokens`
-          }
+    tooltip: {
+      mode: 'nearest',
+      intersect: true,
+      callbacks: {
+        label(context) {
+          const value = Number(context.parsed.y ?? 0)
+          return `${context.dataset.label}: ${value.toLocaleString()} input-equivalent weighted tokens`
         }
       }
+    }
   },
   onClick(_event, elements, chart) {
     const element = elements[0]

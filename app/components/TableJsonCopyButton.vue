@@ -22,8 +22,7 @@ async function copyTableJson() {
     toast.add({
       title: `Copied ${props.tableName} JSON to clipboard`
     })
-  }
-  catch {
+  } catch {
     toast.add({
       title: 'Could not copy table JSON',
       color: 'error'
