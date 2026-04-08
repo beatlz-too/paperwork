@@ -2,7 +2,7 @@
  * OpenTelemetry collector for Claude Code telemetry.
  *
  * Starts an OTLP/HTTP receiver (protobuf or JSON) and writes session + prompt
- * rows to Supabase (via the DATABASE_URL env var and Drizzle ORM).
+ * rows to a local SQLite database (via the DATABASE_URL env var and Drizzle ORM).
  *
  * Claude Code configuration (add to ~/.claude/settings.json):
  *   "env": {
@@ -14,8 +14,11 @@
  *   bun run scripts/otel-collector.ts
  */
 
-import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
+import { drizzle } from 'drizzle-orm/bun-sqlite'
+import { Database } from 'bun:sqlite'
+import { mkdirSync } from 'node:fs'
+import { resolve, dirname } from 'node:path'
+
 import { eq, sql } from 'drizzle-orm'
 import path from 'path'
 import { sessions, prompts } from '../server/db/schema'
@@ -33,7 +36,9 @@ if (!DATABASE_URL) {
   process.exit(1)
 }
 
-const client = postgres(DATABASE_URL)
+const dbPath = resolve(DATABASE_URL)
+mkdirSync(dirname(dbPath), { recursive: true })
+const client = new Database(dbPath)
 const db = drizzle(client, { schema: { sessions, prompts } })
 const toolNameByPromptId = new Map<string, string>()
 
@@ -202,7 +207,7 @@ async function processLogRecord(record: LogRecord, resourceAttrs?: KeyValue[]): 
     .values({ sessionId, name: '', projectName: PROJECT_NAME, createdAt, lastUsedAt: createdAt })
     .onConflictDoUpdate({
       target: sessions.sessionId,
-      set: { lastUsedAt: sql`GREATEST(sessions.last_used_at, EXCLUDED.last_used_at)` }
+      set: { lastUsedAt: sql`MAX(sessions.last_used_at, EXCLUDED.last_used_at)` }
     })
 
   await db
@@ -332,7 +337,7 @@ async function processSpan(span: Span, _resourceAttrs?: KeyValue[]): Promise<voi
       set: {
         requestTokensTotal: sql`sessions.request_tokens_total + EXCLUDED.request_tokens_total`,
         responseTokensTotal: sql`sessions.response_tokens_total + EXCLUDED.response_tokens_total`,
-        lastUsedAt: sql`GREATEST(sessions.last_used_at, EXCLUDED.last_used_at)`
+        lastUsedAt: sql`MAX(sessions.last_used_at, EXCLUDED.last_used_at)`
       }
     })
 
@@ -507,9 +512,9 @@ console.log(`OTel collector listening on http://localhost:${PORT}`)
 console.log(`Project: ${PROJECT_NAME}${process.argv[2] ? '' : ' (default — pass a name as argument to override)'}`)
 console.log('Waiting for Claude Code telemetry spans...')
 
-process.on('SIGINT', async () => {
+process.on('SIGINT', () => {
   console.log('\nShutting down...')
   server.stop()
-  await client.end()
+  client.close()
   process.exit(0)
 })

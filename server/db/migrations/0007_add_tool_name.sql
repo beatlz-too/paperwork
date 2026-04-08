@@ -1,2 +1,0 @@
-ALTER TABLE "prompts"
-  ADD COLUMN IF NOT EXISTS "tool_name" text DEFAULT '' NOT NULL;

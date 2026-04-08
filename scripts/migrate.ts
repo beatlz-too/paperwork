@@ -1,32 +1,18 @@
-import { readFileSync, readdirSync } from 'fs'
-import { join } from 'path'
+import { Database } from 'bun:sqlite'
+import { drizzle } from 'drizzle-orm/bun-sqlite'
+import { migrate } from 'drizzle-orm/bun-sqlite/migrator'
+import { mkdirSync } from 'node:fs'
+import { resolve, dirname } from 'node:path'
 
-const migrationsDir = join(import.meta.dir, '../server/db/migrations')
+const DATABASE_URL = process.env.DATABASE_URL ?? './data/paperwork.db'
+const dbPath = resolve(DATABASE_URL)
 
-const files = readdirSync(migrationsDir)
-  .filter(f => f.endsWith('.sql'))
-  .sort()
+mkdirSync(dirname(dbPath), { recursive: true })
 
-for (const file of files) {
-  const migration = readFileSync(join(migrationsDir, file), 'utf-8')
-  console.log(`Running migration: ${file}`)
+const client = new Database(dbPath)
+const db = drizzle(client)
 
-  const proc = Bun.spawn(
-    ['docker', 'exec', '-i', 'supabase-db', 'psql', '-U', 'postgres', '-d', 'postgres'],
-    {
-      stdin: new TextEncoder().encode(migration),
-      stdout: 'inherit',
-      stderr: 'inherit'
-    }
-  )
+migrate(db, { migrationsFolder: './server/db/migrations' })
+console.log('Migrations complete.')
 
-  const exitCode = await proc.exited
-  if (exitCode !== 0) {
-    console.error(`Migration failed: ${file}`)
-    process.exit(exitCode)
-  }
-
-  console.log(`Done: ${file}`)
-}
-
-console.log('All migrations complete.')
+client.close()

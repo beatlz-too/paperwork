@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 /**
  * Session rollup records.
@@ -6,9 +6,9 @@ import { index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-c
  * Each row represents one Claude Code session and stores the aggregate token totals
  * we use for the overview, project, and session pages.
  */
-export const sessions = pgTable('sessions', {
+export const sessions = sqliteTable('sessions', {
   /** Internal database primary key. */
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   /** Stable session identifier used in URLs and API responses. */
   sessionId: text('session_id').notNull().unique(),
   /** Optional human-friendly session name. */
@@ -24,9 +24,9 @@ export const sessions = pgTable('sessions', {
   /** Total cache-write tokens across all prompts in the session. */
   cacheCreationTokensTotal: integer('cache_creation_tokens_total').notNull().default(0),
   /** Session creation time. */
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
   /** Most recent prompt activity time for the session. */
-  lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow()
+  lastUsedAt: integer('last_used_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date())
 }, table => ({
   projectNameIdx: index('sessions_project_name_idx').on(table.projectName)
 }))
@@ -37,9 +37,9 @@ export const sessions = pgTable('sessions', {
  * Each row represents one API call inside a session prompt and stores the raw
  * per-call token usage that powers the prompt detail page.
  */
-export const prompts = pgTable('prompts', {
+export const prompts = sqliteTable('prompts', {
   /** Internal database primary key. */
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   /** Session identifier this prompt belongs to. */
   sessionId: text('session_id').notNull().references(() => sessions.sessionId),
   /** Stable prompt identifier used in URLs and API responses. */
@@ -57,7 +57,7 @@ export const prompts = pgTable('prompts', {
   /** Cache-write tokens for the API call. */
   cacheCreationTokens: integer('cache_creation_tokens').notNull().default(0),
   /** API call creation time. */
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date())
 })
 
 export type Session = typeof sessions.$inferSelect
