@@ -21,6 +21,7 @@
     "@nuxt/ui": "^4.6.0",
     "@opentelemetry/otlp-proto-exporter-base": "^0.51.1",
     "@opentelemetry/otlp-transformer": "^0.214.0",
+    "better-sqlite3": "^12.8.0",
     "chart.js": "^4.5.1",
     "drizzle-orm": "^0.42.0",
     "nuxt": "^4.4.2",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.15.2",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.5.2",
     "bun-types": "^1.3.11",
     "drizzle-kit": "^0.31.0",
