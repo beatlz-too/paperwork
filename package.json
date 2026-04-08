@@ -13,8 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun run scripts/migrate.ts",
     "db:push": "drizzle-kit push",
-    "telemetry": "bun run scripts/otel-collector.ts",
-    "generate-keys": "bun run scripts/generate-keys.ts"
+    "telemetry": "bun run scripts/otel-collector.ts"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.100",
@@ -25,13 +24,13 @@
     "chart.js": "^4.5.1",
     "drizzle-orm": "^0.42.0",
     "nuxt": "^4.4.2",
-    "postgres": "^3.4.5",
     "tailwindcss": "^4.2.2",
     "vue-chartjs": "^5.3.3"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.15.2",
     "@types/node": "^25.5.2",
+    "bun-types": "^1.3.11",
     "drizzle-kit": "^0.31.0",
     "eslint": "^10.1.0",
     "typescript": "^6.0.2",

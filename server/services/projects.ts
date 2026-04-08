@@ -12,7 +12,7 @@ export async function listProjectNames(): Promise<string[]> {
     .where(
       and(
         isNotNull(sessions.projectName),
-        sql`btrim(${sessions.projectName}) <> ''`
+        sql`trim(${sessions.projectName}) <> ''`
       )
     )
     .orderBy(asc(sessions.projectName))
