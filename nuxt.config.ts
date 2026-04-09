@@ -19,7 +19,7 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    databaseUrl: process.env.DATABASE_URL ?? ''
+    databaseUrl: process.env.DATABASE_URL ?? './data/paperwork.db'
   },
 
   compatibilityDate: '2025-01-15',
