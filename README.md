@@ -38,6 +38,7 @@ cp .env.example .env
 ```
 
 The default `DATABASE_URL=./data/paperwork.db` works out of the box — no changes needed.
+If you omit it entirely, the app and migration scripts still fall back to `./data/paperwork.db`.
 If you are importing old data from Postgres, set `SOURCE_DATABASE_URL` to the
 old Postgres connection string before running the importer.
 
