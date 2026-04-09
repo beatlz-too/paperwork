@@ -19,6 +19,8 @@ Built with Nuxt 4, NuxtUI, SQLite, and Drizzle ORM.
 
 - [Bun](https://bun.sh) ≥ 1.2
 
+You do not need Docker for the SQLite workflow.
+
 ---
 
 ## Setup
@@ -36,10 +38,12 @@ cp .env.example .env
 ```
 
 The default `DATABASE_URL=./data/paperwork.db` works out of the box — no changes needed.
+If you are importing old data from Postgres, set `SOURCE_DATABASE_URL` to the
+old Postgres connection string before running the importer.
 
 ### 3. Run database migrations
 
-Creates the SQLite database and applies the schema:
+Creates the SQLite database file and applies the schema:
 
 ```bash
 bun run db:migrate
@@ -53,6 +57,19 @@ If you ever update the Drizzle schema, generate and apply a new migration:
 bun run db:generate   # generates a new SQL file in server/db/migrations/
 bun run db:migrate    # applies pending migrations
 ```
+
+### 4. Import existing Postgres data
+
+If you already have telemetry in your old Postgres database, import it into the SQLite file with:
+
+```bash
+SOURCE_DATABASE_URL=postgresql://user:password@host:5432/db bun run db:import:postgres
+```
+
+The importer reads the `sessions` and `prompts` tables from Postgres and copies them into `./data/paperwork.db`.
+Keep `DATABASE_URL` pointed at `./data/paperwork.db` for the app and collector.
+
+By default, it refuses to run if the SQLite database already contains rows. If you want to replace the current SQLite contents first, add `--force`.
 
 ---
 
@@ -128,7 +145,8 @@ paperwork/
 │           └── 0000_rapid_rictor.sql      # Initial schema migration
 ├── scripts/
 │   ├── otel-collector.ts                  # OTLP/HTTP receiver
-│   └── migrate.ts                         # Migration runner
+│   ├── migrate.ts                         # Migration runner
+│   └── import-postgres.ts                 # One-time Postgres importer
 ├── shared/
 │   └── types/index.ts                     # Shared Session/Prompt types
 ├── drizzle.config.ts
