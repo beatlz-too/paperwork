@@ -32,6 +32,7 @@ export interface Prompt {
   responseTokens: number
   cacheReadTokens: number
   cacheCreationTokens: number
+  files: string[]
   createdAt: string
 }
 

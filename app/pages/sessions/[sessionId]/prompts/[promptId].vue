@@ -2,7 +2,7 @@
 import type { AggregatedPrompt, BreakdownChartResponse, Prompt, UsageChartResponse } from '#shared/types'
 import { buildReportUrl } from '~/utils/reportUrl'
 import { buildApiCallRows } from '~/utils/tableRows'
-import { apiCallColumns } from '~/utils/tableColumns'
+import { apiCallColumns, fileContextColumns } from '~/utils/tableColumns'
 
 const route = useRoute()
 const router = useRouter()
@@ -29,6 +29,26 @@ const { data: apiCalls, status } = await useFetch<Prompt[]>(
 
 const apiCallRows = computed(() => buildApiCallRows(apiCalls.value ?? []))
 
+const fileContextRows = computed(() => {
+  const rows = []
+  for (const call of apiCallRows.value) {
+    if (call.files && call.files.length > 0) {
+      for (const file of call.files) {
+        rows.push({
+          filePath: file,
+          callNumber: call.callNumber,
+          promptTokens: call.promptTokens,
+          cacheReadTokens: call.cacheReadTokens,
+          cacheCreationTokens: call.cacheCreationTokens,
+          responseTokens: call.responseTokens,
+          toolName: call.toolName
+        })
+      }
+    }
+  }
+  return rows
+})
+
 const { data: chartData, status: chartStatus } = await useFetch<UsageChartResponse>('/api/charts', {
   query: computed(() => ({
     page: 'prompt' as const,
@@ -48,6 +68,7 @@ const { data: breakdownData, status: breakdownStatus } = await useFetch<Breakdow
 useSeoMeta({ title: computed(() => `Prompt ${promptId.value.slice(0, 8)}… – Paperwork`) })
 
 const sorting = ref([{ id: 'callNumber', desc: false }])
+const fileSorting = ref([{ id: 'filePath', desc: false }])
 
 function formatTokens(n: number | null): string {
   if (n == null) return '—'
@@ -268,6 +289,50 @@ function navigate(p: AggregatedPrompt) {
             class="text-4xl"
           />
           <p>No API calls found.</p>
+        </div>
+      </template>
+    </UTable>
+
+    <!-- File Context Breakdown -->
+    <h2 class="text-lg font-semibold mt-12 mb-3">
+      File Contextualization
+    </h2>
+    <div class="mb-3 flex items-center justify-end">
+      <TableExportActions
+        table-name="fileContexts"
+        :rows="fileContextRows"
+        :columns="fileContextColumns"
+      />
+    </div>
+    <UTable
+      v-model:sorting="fileSorting"
+      :data="fileContextRows"
+      :columns="fileContextColumns"
+      :loading="status === 'pending'"
+    >
+      <template #filePath-cell="{ row }">
+        <span class="font-mono text-xs break-all">{{ row.original.filePath }}</span>
+      </template>
+      <template #toolName-cell="{ row }">
+        {{ formatToolName(row.original.toolName) }}
+      </template>
+      <template #promptTokens-cell="{ row }">
+        {{ formatTokens(row.original.promptTokens) }}
+      </template>
+      <template #cacheReadTokens-cell="{ row }">
+        {{ formatTokens(row.original.cacheReadTokens) }}
+      </template>
+      <template #cacheCreationTokens-cell="{ row }">
+        {{ formatTokens(row.original.cacheCreationTokens) }}
+      </template>
+
+      <template #empty>
+        <div class="flex flex-col items-center gap-2 py-12 text-muted">
+          <UIcon
+            name="i-lucide-files"
+            class="text-4xl"
+          />
+          <p>No file context available for this prompt.</p>
         </div>
       </template>
     </UTable>

@@ -57,7 +57,9 @@ export const prompts = sqliteTable('prompts', {
   /** Cache-write tokens for the API call. */
   cacheCreationTokens: integer('cache_creation_tokens').notNull().default(0),
   /** API call creation time. */
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date())
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+  /** Array of file paths read during this tool call */
+  files: text('files', { mode: 'json' }).$type<string[]>().default([])
 })
 
 export type Session = typeof sessions.$inferSelect

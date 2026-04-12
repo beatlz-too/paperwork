@@ -3,6 +3,7 @@ import apiCallsSchema from '../schemas/api-calls.schema.json'
 import projectsSchema from '../schemas/projects.schema.json'
 import promptsSchema from '../schemas/prompts.schema.json'
 import sessionsSchema from '../schemas/sessions.schema.json'
+import fileContextsSchema from '../schemas/file-contexts.schema.json'
 import { getTablePayload, type TableJsonColumn } from './getTablePayload'
 import type { TableJsonTableName } from '../types/tables.interface'
 
@@ -10,7 +11,8 @@ const tableSchemas = {
   sessions: sessionsSchema,
   projects: projectsSchema,
   prompts: promptsSchema,
-  apiCalls: apiCallsSchema
+  apiCalls: apiCallsSchema,
+  fileContexts: fileContextsSchema
 } satisfies Record<TableJsonTableName, unknown>
 
 export function buildReportPrompt(tableName: string, tableSchema: string, tableData: string): string {
