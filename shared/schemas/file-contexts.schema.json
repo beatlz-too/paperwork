@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "paperwork.fileContexts.table.json",
+  "title": "File contexts table JSON",
+  "description": "JSON Schema for the copied file contexts table payload.",
+  "type": "object",
+  "properties": {
+    "fileContexts": {
+      "type": "object",
+      "description": "Copied file contexts table payload.",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "description": "Ordered rows copied from the file contexts table.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "filePath": {
+                "description": "File path shown in the table.",
+                "type": "string"
+              },
+              "callNumber": {
+                "description": "1-based API call number the file was accessed in.",
+                "type": "number"
+              },
+              "promptTokens": {
+                "description": "Input tokens for the call.",
+                "type": "number"
+              },
+              "cacheReadTokens": {
+                "description": "Cache-read tokens for the call.",
+                "type": "number"
+              },
+              "cacheCreationTokens": {
+                "description": "Cache-write tokens for the call.",
+                "type": "number"
+              },
+              "responseTokens": {
+                "description": "Output tokens for the call.",
+                "type": "number"
+              },
+              "toolName": {
+                "description": "Tool name shown for the call.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "filePath",
+              "callNumber",
+              "promptTokens",
+              "cacheReadTokens",
+              "cacheCreationTokens",
+              "responseTokens",
+              "toolName"
+            ]
+          }
+        }
+      },
+      "required": [
+        "rows"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "fileContexts"
+  ],
+  "additionalProperties": false
+}
