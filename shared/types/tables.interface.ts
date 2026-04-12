@@ -97,6 +97,19 @@ export interface ApiCallsTableJsonRow {
 }
 
 /**
+ * Rows copied from the file contexts table.
+ */
+export interface FileContextsTableJsonRow {
+  filePath: string
+  callNumber: number
+  promptTokens: number
+  cacheReadTokens: number
+  cacheCreationTokens: number
+  responseTokens: number
+  toolName: string
+}
+
+/**
  * Clipboard payload for one copied table.
  *
  * Example:
@@ -113,7 +126,7 @@ export interface TableJsonTable<Row> {
 /**
  * Available table names in the UI.
  */
-export type TableJsonTableName = 'sessions' | 'projects' | 'prompts' | 'apiCalls'
+export type TableJsonTableName = 'sessions' | 'projects' | 'prompts' | 'apiCalls' | 'fileContexts'
 
 /**
  * Mapping from table name to the copied row shape for that table.
@@ -123,6 +136,7 @@ export interface TableJsonTableMap {
   projects: TableJsonTable<ProjectsTableJsonRow>
   prompts: TableJsonTable<PromptsTableJsonRow>
   apiCalls: TableJsonTable<ApiCallsTableJsonRow>
+  fileContexts: TableJsonTable<FileContextsTableJsonRow>
 }
 
 /**

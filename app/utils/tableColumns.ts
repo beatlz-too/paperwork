@@ -4,6 +4,15 @@ import { sortableHeader } from './table'
 
 export type PromptTableRow = AggregatedPrompt & { promptNumber: number }
 export type ApiCallTableRow = Prompt & { callNumber: number }
+export type FileContextTableRow = {
+  filePath: string
+  callNumber: number
+  promptTokens: number
+  cacheReadTokens: number
+  cacheCreationTokens: number
+  responseTokens: number
+  toolName: string
+}
 
 export const sessionColumns: TableColumn<Session>[] = [
   { accessorKey: 'projectName', header: sortableHeader<Session>('Project') },
@@ -47,4 +56,12 @@ export const apiCallColumns: TableColumn<ApiCallTableRow>[] = [
   { accessorKey: 'responseTokens', header: sortableHeader<ApiCallTableRow>('Output') },
   { accessorKey: 'cacheReadTokens', header: sortableHeader<ApiCallTableRow>('Cache Read') },
   { accessorKey: 'cacheCreationTokens', header: sortableHeader<ApiCallTableRow>('Cache Write') }
+]
+
+export const fileContextColumns: TableColumn<FileContextTableRow>[] = [
+  { accessorKey: 'filePath', header: sortableHeader<FileContextTableRow>('File Path') },
+  { accessorKey: 'toolName', header: sortableHeader<FileContextTableRow>('Tool') },
+  { accessorKey: 'promptTokens', header: sortableHeader<FileContextTableRow>('Input') },
+  { accessorKey: 'cacheReadTokens', header: sortableHeader<FileContextTableRow>('Cache Read') },
+  { accessorKey: 'cacheCreationTokens', header: sortableHeader<FileContextTableRow>('Cache Write') }
 ]
