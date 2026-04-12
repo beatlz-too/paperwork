@@ -195,7 +195,7 @@ async function processLogRecord(record: LogRecord, resourceAttrs?: KeyValue[]): 
   if (eventName === 'tool_decision' || eventName === 'tool_result') {
     if (promptId && toolName) {
       toolNameByPromptId.set(promptId, toolName)
-      
+
       const files: string[] = []
       for (const attr of attrs) {
         if (typeof attr.value.stringValue === 'string' && attr.value.stringValue.trim().startsWith('{')) {
@@ -206,7 +206,7 @@ async function processLogRecord(record: LogRecord, resourceAttrs?: KeyValue[]): 
             else if (args.pattern) files.push(formatRelativePath(args.pattern))
             else if (args.target) files.push(formatRelativePath(args.target))
           } catch (e) {
-            // ignore
+            console.error(e)
           }
         }
       }
@@ -443,7 +443,7 @@ function parseOtlpTracesFromBuffer(
 
   try {
     const msg = ExportTraceServiceRequest.decode(u8)
-    const obj = (ExportTraceServiceRequest as any).toObject(msg, {
+    const obj = (ExportTraceServiceRequest as unknown as { toObject: (msg: unknown, options: Record<string, unknown>) => unknown }).toObject(msg, {
       longs: String,
       enums: Number,
       defaults: false
